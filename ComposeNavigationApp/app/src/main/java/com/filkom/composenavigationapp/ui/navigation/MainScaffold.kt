@@ -3,6 +3,7 @@ package com.filkom.composenavigationapp.ui.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 import com.filkom.composenavigationapp.ui.screens.HomeScreen
 import com.filkom.composenavigationapp.ui.screens.ProfileScreen
 import com.filkom.composenavigationapp.ui.screens.SettingsScreen
+import com.filkom.composenavigationapp.ui.screens.HelpScreen
 
 // --- BottomNav items ---
 
@@ -33,9 +35,11 @@ sealed class BottomItem(val route: String, val label: String, val icon: androidx
 
     data object Settings : BottomItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings)
 
+    data object Help : BottomItem(Routes.HELP, "Help", Icons.AutoMirrored.Filled.HelpOutline)
+
 }
 
-private val bottomItems = listOf(BottomItem.Home, BottomItem.Profile, BottomItem.Settings)
+private val bottomItems = listOf(BottomItem.Home, BottomItem.Profile, BottomItem.Settings, BottomItem.Help)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -237,6 +241,12 @@ private fun AppDrawer(onNavigate: (String) -> Unit) {
 
         )
 
+        NavigationDrawerItem(
+            label = { Text("Help") },
+            selected = false,
+            onClick = { onNavigate(Routes.HELP) }
+        )
+
     }
 
 }
@@ -261,6 +271,8 @@ private fun MainNavHost(navController: NavHostController) {
         composable(Routes.SETTINGS) { SettingsScreen() }
 
         composable(Routes.ADD) { AddScreen(navController) }
+
+        composable(Routes.HELP) { HelpScreen(navController) }
 
     }
 

@@ -1,10 +1,10 @@
-package com.filkom.designimplementation.feature.chat
+package com.filkom.designimplementation.model.feature.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.filkom.designimplementation.core.ai.AiService
-import com.filkom.designimplementation.core.ai.ChatMsg
-import com.filkom.designimplementation.data.ChatMessage
+import com.filkom.designimplementation.model.core.ai.AiService
+import com.filkom.designimplementation.model.core.ai.ChatMsg
+import com.filkom.designimplementation.model.data.ai.ChatMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,11 +14,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ChatViewModel(
-    private val ai: AiService
-) : ViewModel() {
+class ChatViewModel(private val ai: AiService) : ViewModel() {
 
-    // ===== UI State =====
+    // UI State
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
 

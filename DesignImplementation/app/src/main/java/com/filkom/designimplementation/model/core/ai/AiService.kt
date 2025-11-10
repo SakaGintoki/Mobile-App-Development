@@ -1,4 +1,4 @@
-package com.filkom.designimplementation.core.ai
+package com.filkom.designimplementation.model.core.ai
 
 data class ChatMsg(val role: String, val content: String)
 

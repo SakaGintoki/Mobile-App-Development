@@ -1,10 +1,12 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 
 plugins {
-    alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
+    id("com.android.application")
+    id("com.google.gms.google-services")
+
 }
 
 android {
@@ -43,21 +45,29 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
+        dataBinding = true
         compose = true
         buildConfig = true
     }
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+    implementation("com.google.firebase:firebase-analytics")
     implementation(libs.androidx.foundation)
+    implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.databinding.runtime)
+
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-auth")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
     // OpenAI via OkHttp + kotlinx-serialization
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
     implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("androidx.compose.animation:animation:1.7.3")
     implementation(libs.androidx.core.ktx)

@@ -7,9 +7,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.filkom.designimplementation.core.ai.RealAiService
-import com.filkom.designimplementation.feature.chat.ChatViewModel
-import com.filkom.designimplementation.feature.chat.ChatViewModelFactory
+import com.filkom.designimplementation.model.core.ai.RealAiService
+import com.filkom.designimplementation.model.feature.chat.ChatViewModel
+import com.filkom.designimplementation.model.feature.chat.ChatViewModelFactory
 import com.filkom.designimplementation.ui.auth.AccountCreatedScreen
 import com.filkom.designimplementation.ui.auth.ForgotPasswordScreen
 import com.filkom.designimplementation.ui.auth.LoginScreen
@@ -17,7 +17,7 @@ import com.filkom.designimplementation.ui.auth.SignUpScreen
 import com.filkom.designimplementation.ui.home.HomeScreen
 import com.filkom.designimplementation.ui.littleai.ChatScreen
 import com.filkom.designimplementation.ui.onboarding.OnboardingScreen
-import com.filkom.designimplementation.ui.splash.SplashAnimation
+import com.filkom.designimplementation.ui.splash.SplashScreen
 import com.filkom.designimplementation.ui.start.StartScreen
 
 @Composable
@@ -27,7 +27,7 @@ fun NavGraph(navController: NavHostController) {
         startDestination = "splash"
     ) {
         composable("splash") {
-            SplashAnimation {
+            SplashScreen {
                 navController.navigate("onboarding") {
                     popUpTo("splash") { inclusive = true }
                 }

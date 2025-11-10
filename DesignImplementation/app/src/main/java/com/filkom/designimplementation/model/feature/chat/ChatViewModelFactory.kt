@@ -1,8 +1,8 @@
-package com.filkom.designimplementation.feature.chat
+package com.filkom.designimplementation.model.feature.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.filkom.designimplementation.core.ai.AiService
+import com.filkom.designimplementation.model.core.ai.AiService
 
 class ChatViewModelFactory(
     private val ai: AiService

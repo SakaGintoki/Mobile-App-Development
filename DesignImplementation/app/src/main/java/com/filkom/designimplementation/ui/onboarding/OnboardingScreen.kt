@@ -39,7 +39,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.ui.theme.Poppins
 
 data class OnboardPage(
     val image: Int,
@@ -123,7 +123,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onFinish) {
-                    Text("Lewati", color = Color(0xFFF987C5))
+                    Text("Lewati", color = Color(0xFFF987C5), fontWeight = FontWeight.SemiBold)
                 }
             }
 

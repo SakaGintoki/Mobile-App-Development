@@ -1,8 +1,8 @@
-package com.filkom.designimplementation.data
+package com.filkom.designimplementation.model.data.ai
 
 
-import com.filkom.designimplementation.core.ai.AiService
-import com.filkom.designimplementation.core.ai.ChatMsg
+import com.filkom.designimplementation.model.core.ai.AiService
+import com.filkom.designimplementation.model.core.ai.ChatMsg
 
 class ChatRepository(private val ai: AiService) {
 

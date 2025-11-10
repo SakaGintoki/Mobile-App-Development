@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.filkom.designimplementation.R
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.ui.theme.Poppins
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.animateFloatAsState
 
@@ -36,12 +36,10 @@ import androidx.compose.animation.core.animateFloatAsState
 fun AccountCreatedScreen(
     onClose: () -> Unit = {},
 ) {
-    // Step flags
     var playCheck by remember { mutableStateOf(false) }
     var showTexts  by remember { mutableStateOf(false) }
     var showButton by remember { mutableStateOf(false) }
 
-    // Animate checkmark (scale + fade)
     val scale by animateFloatAsState(
         targetValue = if (playCheck) 1f else 0.2f,
         animationSpec = tween(durationMillis = 650, easing = EaseOutBack),
@@ -53,13 +51,12 @@ fun AccountCreatedScreen(
         label = "check-alpha"
     )
 
-    // Timeline
     LaunchedEffect(Unit) {
-        playCheck = true                 // mainkan ceklis
-        delay(650)                       // tunggu ceklis selesai
-        showTexts = true                 // tampilkan judul & deskripsi
+        playCheck = true
+        delay(650)
+        showTexts = true
         delay(200)
-        showButton = true                // terakhir tombol
+        showButton = true
     }
 
     Box(

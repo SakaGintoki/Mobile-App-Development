@@ -21,7 +21,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.filkom.designimplementation.R
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.ui.theme.Poppins
 
 @Composable
 fun StartScreen(
@@ -36,6 +36,7 @@ fun StartScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(420.dp)
+                .offset(y = 30.dp)
         ) {
             Image(
                 painter = painterResource(R.drawable.start_bg),
@@ -63,7 +64,7 @@ fun StartScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .offset(y = 150.dp)
+                .offset(y = 200.dp)
                 .align(Alignment.CenterEnd)
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 32.dp)

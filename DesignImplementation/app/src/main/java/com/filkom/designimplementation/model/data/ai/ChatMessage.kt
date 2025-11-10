@@ -1,4 +1,4 @@
-package com.filkom.designimplementation.data
+package com.filkom.designimplementation.model.data.ai
 
 data class ChatMessage(
     val id: Long,

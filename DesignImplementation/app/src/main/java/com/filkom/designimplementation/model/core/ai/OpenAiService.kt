@@ -1,8 +1,7 @@
-package com.filkom.designimplementation.core.ai
+package com.filkom.designimplementation.model.core.ai
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -10,8 +9,8 @@ import okhttp3.Request
 import okhttp3.RequestBody
 
 class OpenAiService(
-    private val apiKey: String = "REDACTED",
-    private val model: String = "gpt-4o-mini"
+    protected val apiKey: String = "REDACTED",
+    protected val model: String = "gpt-4o-mini"
 ) : AiService {
 
     @Serializable

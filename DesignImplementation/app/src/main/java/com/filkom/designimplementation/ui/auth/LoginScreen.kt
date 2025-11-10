@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.filkom.designimplementation.R
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.ui.theme.Poppins
 
 @Composable
 fun LoginScreen(

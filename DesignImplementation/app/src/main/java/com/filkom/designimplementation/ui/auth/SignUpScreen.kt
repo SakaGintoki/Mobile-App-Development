@@ -16,7 +16,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.filkom.designimplementation.R
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.ui.theme.Poppins
 
 @Composable
 fun SignUpScreen(
@@ -107,15 +107,6 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = PasswordVisualTransformation()
             )
-
-            Spacer(Modifier.height(6.dp))
-            TextButton(
-                onClick = { /* optional: lupa password */ },
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("Lupa password?", color = Color(0xFFF987C5), fontFamily = Poppins, fontSize = 12.sp)
-            }
 
             Spacer(Modifier.height(10.dp))
 

@@ -37,16 +37,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.filkom.designimplementation.BotDock
-import com.filkom.designimplementation.data.ChatMessage
-import com.filkom.designimplementation.feature.chat.ChatViewModel
+import com.filkom.designimplementation.model.data.ai.ChatMessage
+import com.filkom.designimplementation.model.feature.chat.ChatViewModel
 import com.filkom.designimplementation.R
 import kotlinx.coroutines.launch
+import com.filkom.designimplementation.ui.theme.*
 
 // PALETTE
-private val Pink = Color(0xFFFF70A3)
-private val PinkSoft = Color(0xFFFF79AC)
-private val PageBg = Color(0xFFFFF1F6)
-private val InputBg = Color(0xFFFFFFFF)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,12 +123,6 @@ fun ChatScreen(
                         .size(180.dp)
                         .alpha(0.12f),
                     contentScale = ContentScale.Fit
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "LittleSteps",
-                    color = PinkSoft.copy(alpha = 0.3f),
-                    fontWeight = FontWeight.Bold
                 )
             }
 

@@ -10,24 +10,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.ui.components.SocialCircleButton
 import com.filkom.designimplementation.ui.theme.Poppins
-
+import com.filkom.designimplementation.viewmodel.auth.LoginViewModel
+import com.filkom.designimplementation.viewmodel.auth.SignUpViewModel
+import com.filkom.designimplementation.viewmodel.auth.SignUpState
 @Composable
 fun SignUpScreen(
+    viewModelGoogle: LoginViewModel = viewModel(),
+    viewModel: SignUpViewModel = viewModel(),
     onSignUp: (String, String, String) -> Unit = { _, _, _ -> },
     onFacebook: () -> Unit = {},
     onGoogle: () -> Unit = {},
     onToLogin: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val state by viewModel.signUpState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -111,7 +122,9 @@ fun SignUpScreen(
             Spacer(Modifier.height(10.dp))
 
             Button(
-                onClick = { onSignUp(name, email, password) },
+                onClick = {
+                    viewModel.signUpUser(name, email, password)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -121,10 +134,41 @@ fun SignUpScreen(
                 Text("Sign Up", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
 
+            when (state) {
+                is SignUpState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 16.dp),
+                        color = Color(0xFFF987C5)
+                    )
+                }
+                is SignUpState.Success -> {
+                    LaunchedEffect(Unit) {
+                        println("Akun berhasil dibuat")
+                        onSignUp(name, email, password)
+                    }
+                }
+
+                is SignUpState.Failed -> {
+                    val msg = (state as SignUpState.Failed).message
+
+                    Text(
+                        text = msg,
+                        color = Color.Red,
+                        fontFamily = Poppins,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 8.dp)
+                    )
+                }
+                else -> {}
+            }
             Spacer(Modifier.height(22.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
                 Text(
                     "atau Login dengan",
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -132,7 +176,7 @@ fun SignUpScreen(
                     fontFamily = Poppins,
                     fontSize = 12.sp
                 )
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(18.dp))
@@ -142,8 +186,15 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                SocialCircleButton(R.drawable.ic_facebook, "Facebook", onFacebook)
-                SocialCircleButton(R.drawable.ic_google, "Google", onGoogle)
+                SocialCircleButton(R.drawable.ic_facebook, "Facebook")
+                {
+                    TODO()
+                }
+                SocialCircleButton(R.drawable.ic_google, "Google")
+                {
+                    val webClientId = context.getString(R.string.default_web_client_id)
+                    viewModelGoogle.signInWithGoogle(context, webClientId)
+                }
             }
 
             Spacer(Modifier.height(22.dp))
@@ -181,19 +232,3 @@ private fun FieldLabel(text: String) {
     Spacer(Modifier.height(6.dp))
 }
 
-@Composable
-private fun SocialCircleButton(iconRes: Int, contentDesc: String, onClick: () -> Unit) {
-    OutlinedIconButton(
-        onClick = onClick,
-        shape = CircleShape,
-        colors = IconButtonDefaults.outlinedIconButtonColors(),
-        modifier = Modifier.size(48.dp)
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = contentDesc,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(22.dp)
-        )
-    }
-}

@@ -1,4 +1,4 @@
-package com.filkom.designimplementation.ui.navigation
+package com.filkom.designimplementation.viewmodel.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,6 +11,7 @@ import com.filkom.designimplementation.model.core.ai.RealAiService
 import com.filkom.designimplementation.model.feature.chat.ChatViewModel
 import com.filkom.designimplementation.model.feature.chat.ChatViewModelFactory
 import com.filkom.designimplementation.ui.auth.AccountCreatedScreen
+import com.filkom.designimplementation.ui.auth.AccountFailedScreen
 import com.filkom.designimplementation.ui.auth.ForgotPasswordScreen
 import com.filkom.designimplementation.ui.auth.LoginScreen
 import com.filkom.designimplementation.ui.auth.SignUpScreen
@@ -48,9 +49,7 @@ fun NavGraph(navController: NavHostController) {
         composable("start") {
             StartScreen(
                 onLoginClick = { navController.navigate("login") },
-                onSignUpClick = { navController.navigate("signup") },
-                onFacebookClick = { /* optional */ },
-                onGoogleClick = { /* optional */ }
+                onSignUpClick = { navController.navigate("signup") }
             )
         }
 
@@ -58,17 +57,19 @@ fun NavGraph(navController: NavHostController) {
         composable("login") {
             LoginScreen(
                 onForgotPassword = { navController.navigate("forgot") },
-                onLogin = { _, _ ->
+                onSuccess = {
                     navController.navigate("home") {
                         popUpTo("start") { inclusive = true }
                         launchSingleTop = true
                     }
                 },
-                onFacebook = { /* TODO */ },
-                onGoogle   = { /* TODO */ },
+                onFailed = { message ->
+                    println("Login gagal: $message")
+                },
                 onToSignUp = { navController.navigate("signup") }
             )
         }
+
 
         // SIGN UP
         composable("signup") {
@@ -106,6 +107,17 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
+        composable("signup_failed") {
+            AccountFailedScreen(
+                onRetry = {
+                    navController.navigate("signup") {
+                        popUpTo("start") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
         // HOME
         composable("home") {
             HomeScreen(
@@ -114,7 +126,7 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // LITTLE-AI (✅ with factory + welcome seed)
+        // LITTLE-AI (With factory + welcome seed)
         composable("little_ai") {
             val ai = remember { RealAiService() }
             val vm: ChatViewModel = viewModel(factory = ChatViewModelFactory(ai))

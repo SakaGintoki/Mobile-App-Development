@@ -8,7 +8,7 @@ val PinkSoft = Color(0xFFFF79AC)
 val PageBg = Color(0xFFfef3f9)
 val InputBg = Color(0xFFFFFFFF)
 val TextClr = Color(0xFFf5ebf7)
-
+val BorderClr = Color(0xFFdfdfdf)
 val primaryGradient = arrayOf(
     0.0f to Color(0xFFa75fbf),
     0.25f to Color(0xFFa960bf),

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -20,16 +21,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.model.data.auth.User
+import com.filkom.designimplementation.ui.components.SocialCircleButton
 import com.filkom.designimplementation.ui.theme.Poppins
+import com.filkom.designimplementation.viewmodel.auth.LoginViewModel
 
 @Composable
 fun StartScreen(
+    viewModelGoogle: LoginViewModel = viewModel(),
+    onSuccess: (User) -> Unit = {},
+    onFailed: (String) -> Unit = {},
     onLoginClick: () -> Unit = {},
-    onSignUpClick: () -> Unit = {},
-    onFacebookClick: () -> Unit = {},
-    onGoogleClick: () -> Unit = {}
+    onSignUpClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize()) {
         // Header foto + fade putih ke bawah
         Box(
@@ -117,29 +124,20 @@ fun StartScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Sosmed: Facebook & Google
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Facebook
-                Button(
-                    onClick = onFacebookClick,
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    contentPadding = PaddingValues(0.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Image(painter = painterResource(R.drawable.ic_facebook), contentDescription = "Facebook Login", modifier = Modifier.size(24.dp))
+
+            // Sosial: Facebook & Google
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SocialCircleButton(R.drawable.ic_facebook, "Facebook")
+                {
+                    TODO()
                 }
-                // Google
-                Button(
-                    onClick = onGoogleClick,
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    contentPadding = PaddingValues(0.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Image(painter = painterResource(R.drawable.ic_google), contentDescription = "Google Login", modifier = Modifier.size(24.dp))
+                SocialCircleButton(R.drawable.ic_google, "Google")
+                {
+                    val webClientId = context.getString(R.string.default_web_client_id)
+                    viewModelGoogle.signInWithGoogle(context, webClientId)
                 }
             }
         }

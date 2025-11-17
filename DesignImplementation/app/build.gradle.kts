@@ -58,10 +58,13 @@ dependencies {
     implementation(libs.androidx.ui.text)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.databinding.runtime)
-
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    implementation("androidx.credentials:credentials")
+    implementation("androidx.credentials:credentials-play-services-auth")
+    implementation("com.google.android.libraries.identity.googleid:googleid")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
+
+    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 

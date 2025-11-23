@@ -2,7 +2,6 @@ package com.filkom.designimplementation.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,25 +9,40 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.filkom.designimplementation.R
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.model.data.auth.User
+import com.filkom.designimplementation.ui.components.SocialCircleButton
+import com.filkom.designimplementation.ui.theme.Pink
+import com.filkom.designimplementation.ui.theme.Poppins
+import com.filkom.designimplementation.viewmodel.auth.LoginViewModel
+import com.filkom.designimplementation.viewmodel.auth.LoginState
+import com.filkom.designimplementation.viewmodel.auth.SignUpState
 
 @Composable
 fun LoginScreen(
+    viewModel: LoginViewModel = viewModel(),
     onForgotPassword: () -> Unit = {},
-    onLogin: (String, String) -> Unit = { _, _ -> },
-    onFacebook: () -> Unit = {},
-    onGoogle: () -> Unit = {},
-    onToSignUp: () -> Unit = {}
+    onSuccess: (User) -> Unit = {},
+    onFailed: (String) -> Unit = {},
+
+    onLogin: (String, String) -> Unit = { username, password -> },
+    onToSignUp: () -> Unit = {},
+    onGoogle: () -> Unit
 ) {
+    val context = LocalContext.current
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val state by viewModel.loginState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -91,6 +105,7 @@ fun LoginScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
+
             )
 
             Spacer(Modifier.height(14.dp))
@@ -113,7 +128,7 @@ fun LoginScreen(
                 contentPadding = PaddingValues(0.dp),
                 modifier = Modifier.align(Alignment.End)
             ) {
-                Text("Lupa password?", color = Color(0xFFF987C5), fontFamily = Poppins, fontSize = 12.sp)
+                Text("Lupa password?", color = Pink, fontFamily = Poppins, fontSize = 12.sp)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -125,16 +140,50 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF987C5))
+                colors = ButtonDefaults.buttonColors(containerColor = Pink)
             ) {
-                Text("Login", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                if (state is LoginState.Loading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Login", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
             }
+            when (state) {
+                is LoginState.Success -> {
+                    val user = (state as LoginState.Success).user
+                    LaunchedEffect(user) {
+                        onSuccess(user)
+                    }
+                }
 
+                is LoginState.Failed -> {
+                    val msg = (state as LoginState.Failed).message
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = msg,
+                            color = Color.Red,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            fontFamily = Poppins
+                        )
+                    }
+                    LaunchedEffect(msg) {
+                        onFailed(msg)
+                    }
+                }
+
+                else -> Unit
+            }
             Spacer(Modifier.height(22.dp))
 
             // Divider + teks tengah
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
                 Text(
                     "atau Login dengan",
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -143,7 +192,7 @@ fun LoginScreen(
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center
                 )
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(18.dp))
@@ -153,8 +202,15 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                SocialCircleButton(R.drawable.ic_facebook, "Facebook", onFacebook)
-                SocialCircleButton(R.drawable.ic_google, "Google", onGoogle)
+                SocialCircleButton(R.drawable.ic_facebook, "Facebook")
+                {
+                    TODO()
+                }
+                SocialCircleButton(R.drawable.ic_google, "Google")
+                {
+                    val webClientId = context.getString(R.string.web_client_id)
+                    viewModel.signInWithGoogle(context, webClientId)
+                }
             }
 
             Spacer(Modifier.height(22.dp))
@@ -171,7 +227,7 @@ fun LoginScreen(
                 )
                 Text(
                     text = "SignUp",
-                    color = Color(0xFFF987C5),
+                    color = Pink,
                     fontFamily = Poppins,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp
@@ -181,19 +237,3 @@ fun LoginScreen(
     }
 }
 
-@Composable
-private fun SocialCircleButton(iconRes: Int, contentDesc: String, onClick: () -> Unit) {
-    OutlinedIconButton(
-        onClick = onClick,
-        shape = CircleShape,
-        colors = IconButtonDefaults.outlinedIconButtonColors(),
-        modifier = Modifier.size(48.dp)
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = contentDesc,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(22.dp)
-        )
-    }
-}

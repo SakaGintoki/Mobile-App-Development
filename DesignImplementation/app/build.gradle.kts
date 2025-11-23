@@ -1,10 +1,12 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 
 plugins {
-    alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
+    id("com.android.application")
+    id("com.google.gms.google-services")
+
 }
 
 android {
@@ -43,13 +45,31 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
+        dataBinding = true
         compose = true
         buildConfig = true
     }
 }
 
 dependencies {
+    implementation("io.coil-kt.coil3:coil-compose:3.0.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+    implementation("com.google.firebase:firebase-analytics")
     implementation(libs.androidx.foundation)
+    implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.databinding.runtime)
+    implementation("androidx.credentials:credentials")
+    implementation("androidx.credentials:credentials-play-services-auth")
+    implementation("com.google.android.libraries.identity.googleid:googleid")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-auth")
+    implementation(libs.foundation)
+    implementation(libs.foundation.layout)
+    implementation(libs.ui)
+    implementation(libs.ui.text)
+
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -57,7 +77,6 @@ dependencies {
     // OpenAI via OkHttp + kotlinx-serialization
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
     implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("androidx.compose.animation:animation:1.7.3")
     implementation(libs.androidx.core.ktx)

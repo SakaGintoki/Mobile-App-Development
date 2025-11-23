@@ -1,37 +1,91 @@
 package com.filkom.designimplementation.ui.auth
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.filkom.designimplementation.R
-import com.filkom.designimplementation.typography.Poppins
+import com.filkom.designimplementation.ui.components.SocialCircleButton
+import com.filkom.designimplementation.ui.theme.Poppins
+import com.filkom.designimplementation.viewmodel.auth.LoginState
+import com.filkom.designimplementation.viewmodel.auth.LoginViewModel
+import com.filkom.designimplementation.viewmodel.auth.SignUpViewModel
+import com.filkom.designimplementation.viewmodel.auth.SignUpState
 
 @Composable
 fun SignUpScreen(
-    onSignUp: (String, String, String) -> Unit = { _, _, _ -> },
-    onFacebook: () -> Unit = {},
+    viewModelGoogle: LoginViewModel = viewModel(),
+    viewModel: SignUpViewModel = viewModel(),
+    onSuccess: (String, String?, String?) -> Unit, // Diganti dari onSignUp agar lebih jelas
+    onFailed: (String) -> Unit, // Callback baru untuk error
+    onToLogin: () -> Unit = {},
+
     onGoogle: () -> Unit = {},
-    onToLogin: () -> Unit = {}
+    onFacebook: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    // Observasi State
+    val state by viewModel.signUpState.collectAsState()
+    val googleState by viewModelGoogle.loginState.collectAsState()
+
+    // ==================================================================
+    // 1. LOGIKA NAVIGASI DILETAKKAN DI SINI (TOP LEVEL)
+    // ==================================================================
+    LaunchedEffect(state) {
+        when (state) {
+            is SignUpState.Success -> {
+                val user = (state as SignUpState.Success).user
+                onSuccess(user.id, user.email, user.name) // Panggil Callback Sukses
+            }
+            is SignUpState.Failed -> {
+                val errorMsg = (state as SignUpState.Failed).message
+                onFailed(errorMsg) // Panggil Callback Gagal
+            }
+            else -> {}
+        }
+    }
+
+    // 2. Listener untuk Google Sign Up
+    LaunchedEffect(googleState) {
+        when (googleState) {
+            is LoginState.Success -> {
+                val user = (googleState as LoginState.Success).user
+                onSuccess(user.id, user.email, user.name) // Panggil Callback Sukses
+            }
+            is LoginState.Failed -> {
+                val errorMsg = (googleState as LoginState.Failed).message
+                onFailed(errorMsg) // Panggil Callback Gagal
+            }
+            else -> {}
+        }
+    }
+
+    // ==================================================================
+    // UI LAYOUT
+    // ==================================================================
     Column(modifier = Modifier.fillMaxSize()) {
 
-        // ========= HEADER (gambar gradasi) =========
+        // ========= HEADER =========
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -45,7 +99,7 @@ fun SignUpScreen(
             )
         }
 
-        // ========= TEKS DI BAWAH HEADER =========
+        // ========= TEKS INTRO =========
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
@@ -69,7 +123,7 @@ fun SignUpScreen(
             )
         }
 
-        // ========= FORM =========
+        // ========= FORM INPUT =========
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
@@ -93,7 +147,8 @@ fun SignUpScreen(
                 placeholder = { Text("Masukan email", fontFamily = Poppins) },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
             Spacer(Modifier.height(14.dp))
@@ -105,35 +160,46 @@ fun SignUpScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation()
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
-
-            Spacer(Modifier.height(6.dp))
-            TextButton(
-                onClick = { /* optional: lupa password */ },
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("Lupa password?", color = Color(0xFFF987C5), fontFamily = Poppins, fontSize = 12.sp)
-            }
 
             Spacer(Modifier.height(10.dp))
 
+            // Tombol Sign Up
             Button(
-                onClick = { onSignUp(name, email, password) },
+                onClick = {
+                    // Panggil ViewModel
+                    viewModel.signUpUser(name, email, password)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF987C5))
             ) {
-                Text("Sign Up", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                // Ubah teks tombol jadi loading jika sedang proses (Optional UX)
+                if (state is SignUpState.Loading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Sign Up", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
+            }
+
+            // Tampilkan Error Message jika Gagal
+            if (state is SignUpState.Failed) {
+                Text(
+                    text = (state as SignUpState.Failed).message,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
+                )
             }
 
             Spacer(Modifier.height(22.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
                 Text(
                     "atau Login dengan",
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -141,22 +207,41 @@ fun SignUpScreen(
                     fontFamily = Poppins,
                     fontSize = 12.sp
                 )
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(18.dp))
 
-            // Social: Facebook & Google
+            // Social Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                SocialCircleButton(R.drawable.ic_facebook, "Facebook", onFacebook)
-                SocialCircleButton(R.drawable.ic_google, "Google", onGoogle)
+                SocialCircleButton(R.drawable.ic_facebook, "Facebook") {
+                    onFacebook()
+                }
+                SocialCircleButton(R.drawable.ic_google, "Google") {
+                    val webClientId = context.getString(R.string.default_web_client_id)
+                    viewModelGoogle.signInWithGoogle(context, webClientId)
+                }
+            }
+
+            // Handle Loading/Error Google
+            if (googleState is LoginState.Loading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), color = Color(0xFFF987C5))
+            }
+            if (googleState is LoginState.Failed) {
+                Text(
+                    text = (googleState as LoginState.Failed).message,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
+                )
             }
 
             Spacer(Modifier.height(22.dp))
 
+            // Tombol ke Login
             TextButton(
                 onClick = onToLogin,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -188,21 +273,4 @@ private fun FieldLabel(text: String) {
         fontWeight = FontWeight.Bold
     )
     Spacer(Modifier.height(6.dp))
-}
-
-@Composable
-private fun SocialCircleButton(iconRes: Int, contentDesc: String, onClick: () -> Unit) {
-    OutlinedIconButton(
-        onClick = onClick,
-        shape = CircleShape,
-        colors = IconButtonDefaults.outlinedIconButtonColors(),
-        modifier = Modifier.size(48.dp)
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = contentDesc,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(22.dp)
-        )
-    }
 }

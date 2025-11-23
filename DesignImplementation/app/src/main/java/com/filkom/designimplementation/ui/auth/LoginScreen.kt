@@ -2,7 +2,6 @@ package com.filkom.designimplementation.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,21 +20,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.filkom.designimplementation.R
 import com.filkom.designimplementation.model.data.auth.User
 import com.filkom.designimplementation.ui.components.SocialCircleButton
-import com.filkom.designimplementation.ui.theme.BorderClr
+import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
 import com.filkom.designimplementation.viewmodel.auth.LoginViewModel
 import com.filkom.designimplementation.viewmodel.auth.LoginState
+import com.filkom.designimplementation.viewmodel.auth.SignUpState
 
 @Composable
 fun LoginScreen(
-    viewModelGoogle: LoginViewModel = viewModel(),
     viewModel: LoginViewModel = viewModel(),
     onForgotPassword: () -> Unit = {},
     onSuccess: (User) -> Unit = {},
     onFailed: (String) -> Unit = {},
 
-    onLogin: (String, String) -> Unit = { _, _ -> },
-    onToSignUp: () -> Unit = {}
+    onLogin: (String, String) -> Unit = { username, password -> },
+    onToSignUp: () -> Unit = {},
+    onGoogle: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -128,7 +128,7 @@ fun LoginScreen(
                 contentPadding = PaddingValues(0.dp),
                 modifier = Modifier.align(Alignment.End)
             ) {
-                Text("Lupa password?", color = Color(0xFFF987C5), fontFamily = Poppins, fontSize = 12.sp)
+                Text("Lupa password?", color = Pink, fontFamily = Poppins, fontSize = 12.sp)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -140,20 +140,15 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF987C5))
+                colors = ButtonDefaults.buttonColors(containerColor = Pink)
             ) {
-                Text("Login", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                if (state is LoginState.Loading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Login", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
             }
             when (state) {
-                is LoginState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(top = 16.dp),
-                        color = Color(0xFFF987C5)
-                    )
-                }
-
                 is LoginState.Success -> {
                     val user = (state as LoginState.Success).user
                     LaunchedEffect(user) {
@@ -197,7 +192,7 @@ fun LoginScreen(
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center
                 )
-                Divider(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(18.dp))
@@ -213,8 +208,8 @@ fun LoginScreen(
                 }
                 SocialCircleButton(R.drawable.ic_google, "Google")
                 {
-                    val webClientId = context.getString(R.string.default_web_client_id)
-                    viewModelGoogle.signInWithGoogle(context, webClientId)
+                    val webClientId = context.getString(R.string.web_client_id)
+                    viewModel.signInWithGoogle(context, webClientId)
                 }
             }
 
@@ -232,7 +227,7 @@ fun LoginScreen(
                 )
                 Text(
                     text = "SignUp",
-                    color = Color(0xFFF987C5),
+                    color = Pink,
                     fontFamily = Poppins,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp

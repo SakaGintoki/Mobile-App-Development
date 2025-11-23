@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.ui.theme.Pink
 import kotlinx.coroutines.delay
 
 @Composable
@@ -35,16 +36,16 @@ fun SplashScreen(onFinished: () -> Unit) {
     )
 
     val bgColor by animateColorAsState(
-        targetValue = if (showGlow) Color(0xFFF987C5) else Color.White,
+        targetValue = if (showGlow) Pink else Color.White,
         animationSpec = tween(1200)
     )
 
     // Urutan animasi
     LaunchedEffect(Unit) {
         startAnim = true
-        delay(800)
+        delay(400)
         showGlow = true
-        delay(1600)
+        delay(1000)
         onFinished()
     }
 

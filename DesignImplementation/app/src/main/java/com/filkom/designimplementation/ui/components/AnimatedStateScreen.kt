@@ -1,20 +1,12 @@
-package com.filkom.designimplementation.ui.auth
+package com.filkom.designimplementation.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.EaseOutBack
-import androidx.compose.animation.core.EaseOutCubic
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,31 +20,73 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
+import com.filkom.designimplementation.ui.theme.Red
 import kotlinx.coroutines.delay
-import androidx.compose.animation.core.animateFloatAsState
 
 @Composable
-fun AccountCreatedScreen(
-    onClose: () -> Unit = {},
+fun SuccessScreen(
+    title: String,
+    description: String,
+    buttonText: String = "Lanjut",
+    onButtonClick: () -> Unit
 ) {
-    var playCheck by remember { mutableStateOf(false) }
-    var showTexts  by remember { mutableStateOf(false) }
+    BaseAnimatedScreen(
+        iconRes = R.drawable.ceklis,
+        title = title,
+        description = description,
+        buttonText = buttonText,
+        primaryColor = Pink,
+        onButtonClick = onButtonClick
+    )
+}
+
+@Composable
+fun FailedScreen(
+    title: String,
+    description: String,
+    buttonText: String = "Coba Lagi",
+    onButtonClick: () -> Unit
+) {
+    BaseAnimatedScreen(
+        iconRes = R.drawable.ic_cross_failed,
+        title = title,
+        description = description,
+        buttonText = buttonText,
+        primaryColor = Red,
+        onButtonClick = onButtonClick
+    )
+}
+
+// ==========================================================
+// 3. BASE ENGINE (Private, tidak perlu dipanggil langsung)
+//    Ini yang menangani animasi & layout agar tidak duplikat
+// ==========================================================
+@Composable
+private fun BaseAnimatedScreen(
+    @DrawableRes iconRes: Int,
+    title: String,
+    description: String,
+    buttonText: String,
+    primaryColor: Color,
+    onButtonClick: () -> Unit
+) {
+    var playAnim by remember { mutableStateOf(false) }
+    var showTexts by remember { mutableStateOf(false) }
     var showButton by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
-        targetValue = if (playCheck) 1f else 0.2f,
-        animationSpec = tween(durationMillis = 650, easing = EaseOutBack),
-        label = "check-scale"
+        targetValue = if (playAnim) 1f else 0.2f,
+        animationSpec = tween(650, easing = EaseOutBack), label = "scale"
     )
     val alpha by animateFloatAsState(
-        targetValue = if (playCheck) 1f else 0f,
-        animationSpec = tween(durationMillis = 500, easing = EaseOutCubic),
-        label = "check-alpha"
+        targetValue = if (playAnim) 1f else 0f,
+        animationSpec = tween(500, easing = EaseOutCubic), label = "alpha"
     )
 
     LaunchedEffect(Unit) {
-        playCheck = true
+        playAnim = true
         delay(650)
         showTexts = true
         delay(200)
@@ -69,10 +103,10 @@ fun AccountCreatedScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Ceklis.png (tanpa konfeti)
+            // Icon
             Image(
-                painter = painterResource(R.drawable.ceklis),
-                contentDescription = "Berhasil",
+                painter = painterResource(iconRes),
+                contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(120.dp)
@@ -82,24 +116,23 @@ fun AccountCreatedScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // Title + subtitle muncul setelah ceklis
+            // Teks
             AnimatedVisibility(
                 visible = showTexts,
-                enter = fadeIn(tween(300)) + slideInVertically { it / 6 },
-                exit  = fadeOut(tween(150)) + slideOutVertically { it / 6 }
+                enter = fadeIn(tween(300)) + slideInVertically { it / 6 }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Akun Berhasil dibuat!",
+                        text = title,
                         fontFamily = Poppins,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 20.sp,
-                        color = Color(0xFF222222),
+                        color = if (primaryColor == Pink) Color(0xFF222222) else primaryColor,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Terima kasih telah bergabung. Kami senang bisa menemani perjalananmu.",
+                        text = description,
                         fontFamily = Poppins,
                         fontSize = 12.sp,
                         color = Color(0xFF8F8F93),
@@ -112,26 +145,22 @@ fun AccountCreatedScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Tombol muncul paling akhir
             AnimatedVisibility(
                 visible = showButton,
-                enter = fadeIn(tween(300)) + slideInVertically { it / 8 },
-                exit  = fadeOut(tween(150)) + slideOutVertically { it / 8 }
+                enter = fadeIn(tween(300)) + slideInVertically { it / 8 }
             ) {
                 Button(
-                    onClick = onClose,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
+                    onClick = onButtonClick,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF987C5))
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
                 ) {
                     Text(
-                        "Lanjut",
+                        text = buttonText,
                         fontFamily = Poppins,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = Color.White
                     )
                 }
             }

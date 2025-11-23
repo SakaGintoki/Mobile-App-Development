@@ -1,4 +1,4 @@
-package com.filkom.designimplementation.model.feature.chat
+package com.filkom.designimplementation.viewmodel.feature.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

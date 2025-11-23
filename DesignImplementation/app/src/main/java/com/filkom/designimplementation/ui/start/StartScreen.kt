@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -34,7 +33,8 @@ fun StartScreen(
     onSuccess: (User) -> Unit = {},
     onFailed: (String) -> Unit = {},
     onLoginClick: () -> Unit = {},
-    onSignUpClick: () -> Unit = {}
+    onSignUpClick: () -> Unit = {},
+    onGoogleClick: () -> Unit
 ) {
     val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize()) {

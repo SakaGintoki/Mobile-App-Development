@@ -1,10 +1,5 @@
-package com.filkom.designimplementation.ui.littleai
+package com.filkom.designimplementation.ui.feature.littleai
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-// import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Image
@@ -30,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,13 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.filkom.designimplementation.BotDock
 import com.filkom.designimplementation.model.data.ai.ChatMessage
-import com.filkom.designimplementation.model.feature.chat.ChatViewModel
+import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModel
 import com.filkom.designimplementation.R
 import kotlinx.coroutines.launch
 import com.filkom.designimplementation.ui.theme.*
-
-// PALETTE
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +49,6 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    // posisi avatar yang bisa diubah-ubah
     var dock by rememberSaveable(stateSaver = BotDock.saver()) {
         mutableStateOf<BotDock>(BotDock.TopBar)
     }
@@ -66,51 +57,45 @@ fun ChatScreen(
         scope.launch { listState.animateScrollToItem(maxOf(messages.size - 1, 0)) }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (dock is BotDock.TopBar) {
-                            BotAvatar(size = 28.dp, onClick = { dock = BotDock.next(dock) })
-                        }
-                        Text("Little AI", color = PinkSoft, fontWeight = FontWeight.SemiBold)
+    // Container Utama (Tanpa Scaffold)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Primary200)
+    ) {
+        // 1. TOP BAR
+        CenterAlignedTopAppBar(
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (dock is BotDock.TopBar) {
+                        BotAvatar(size = 28.dp, onClick = { dock = BotDock.next(dock) })
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = PinkSoft)
-                    }
-                },
-                actions = {
-                    // Hapus ikon lokasi; sisakan menu jika diinginkan
-                    IconButton(onClick = { /* TODO menu */ }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = PinkSoft)
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-            )
-        },
-        bottomBar = {
-            BottomBar(
-                value = input,
-                onValueChange = { input = it },
-                onSend = { vm.send(input).also { input = "" } },
-                dock = dock,
-                onAvatarClick = { dock = BotDock.next(dock) }
-            )
-        },
-        containerColor = PageBg
-    ) { inner ->
+                    Text("Little AI", color = Primary500, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Primary400)
+                }
+            },
+            actions = {
+                IconButton(onClick = { /* TODO menu */ }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Primary400)
+                }
+            },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+        )
+
+        // 2. CONTENT AREA (Mengisi sisa ruang)
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(inner)
+                .weight(1f)
+                .fillMaxWidth()
         ) {
-            // Watermark tengah
+            // Watermark
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -126,7 +111,7 @@ fun ChatScreen(
                 )
             }
 
-            // Daftar pesan
+            // List Pesan
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -141,7 +126,7 @@ fun ChatScreen(
                             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                         ) {
                             BotAvatar(size = 40.dp, onClick = { dock = BotDock.next(dock) })
-                            Text("Halo, aku Little AI. Ceritakan kebutuhanmu ya 💗", color = PinkSoft)
+                            Text("Halo, aku Little AI. Ceritakan kebutuhanmu ya 💗", color = Primary400)
                         }
                     }
                 }
@@ -153,23 +138,17 @@ fun ChatScreen(
                 item { Spacer(Modifier.height(96.dp)) }
             }
 
-            // Avatar melayang
-            AnimatedVisibility(
-                visible = dock is BotDock.FloatingEnd,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                Box(Modifier.fillMaxSize()) {
-                    BotAvatar(
-                        size = 48.dp,
-                        onClick = { dock = BotDock.next(dock) },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp)
-                    )
-                }
-            }
+            // --- BAGIAN AVATAR MELAYANG SUDAHDIHAPUS DISINI ---
         }
+
+        // 3. BOTTOM BAR (Input)
+        BottomBar(
+            value = input,
+            onValueChange = { input = it },
+            onSend = { vm.send(input).also { input = "" } },
+            dock = dock,
+            onAvatarClick = { dock = BotDock.next(dock) }
+        )
     }
 }
 
@@ -187,7 +166,6 @@ private fun BotAvatar(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        // Ganti mic dengan logo supaya tidak terlihat ikon mic di AppBar
         Image(
             painter = painterResource(R.drawable.ic_littlesteps_logo),
             contentDescription = "Bot",
@@ -207,7 +185,6 @@ private fun MessageBubble(m: ChatMessage) {
     else
         RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp)
 
-    // Bersihkan **bold** dan markdown dasar untuk pesan AI saja
     val displayText = if (isUser) m.text else m.text.stripBasicMarkdown()
 
     Row(
@@ -239,11 +216,12 @@ private fun BottomBar(
         color = Pink,
         shadowElevation = 12.dp,
         tonalElevation = 0.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+//        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding() // Padding otomatis saat keyboard muncul
                 .padding(
                     start = 14.dp,
                     end = 14.dp,
@@ -251,7 +229,7 @@ private fun BottomBar(
                     bottom = WindowInsets.navigationBars
                         .asPaddingValues()
                         .calculateBottomPadding()
-                        .coerceAtLeast(12.dp)
+                        .coerceAtLeast(12.dp) // Padding aman navigasi bawah
                 ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -271,17 +249,16 @@ private fun BottomBar(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(InputBg),
+                    .background(Primary200),
                 trailingIcon = {
-                    // Hapus blok ini jika ingin menghilangkan mic di kolom input
                     IconButton(onClick = { /* voice */ }) {
                         Icon(Icons.Outlined.Mic, contentDescription = "Mic", tint = Pink)
                     }
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = InputBg,
-                    unfocusedContainerColor = InputBg,
-                    disabledContainerColor = InputBg,
+                    focusedContainerColor = Primary200,
+                    unfocusedContainerColor = Primary200,
+                    disabledContainerColor = Primary200,
                     cursorColor = Pink,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
@@ -302,7 +279,7 @@ private fun BottomBar(
 }
 
 @Composable
-private fun CircleIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+private fun CircleIcon(icon: ImageVector, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
         modifier = Modifier
@@ -314,22 +291,14 @@ private fun CircleIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, on
     }
 }
 
-/* ===== Helpers ===== */
-
-/** Bersihkan **bold**, _italic_, `code`, [link](url), serta LaTeX escaped \( \) dan \[ \] */
 private fun String.stripBasicMarkdown(): String = this
-    // **bold** dan __bold__
     .replace(Regex("""\*\*(.*?)\*\*"""), "$1")
     .replace(Regex("""__(.*?)__"""), "$1")
-    // *italic* dan _italic_
     .replace(Regex("""\*(.*?)\*"""), "$1")
     .replace(Regex("""_(.*?)_"""), "$1")
-    // `code`
     .replace(Regex("""`([^`]+)`"""), "$1")
-    // [text](url)
     .replace(Regex("""\[(.*?)]\((.*?)\)"""), "$1")
-    // LaTeX inline \( \) dan block \[ \]
-    .replace("""\\""", "\\") // normalisasi escape
+    .replace("""\\""", "\\")
     .replace("""\(""", "")
     .replace("""\)""", "")
     .replace("""\[""", "")

@@ -1,4 +1,4 @@
-package com.filkom.designimplementation.model.feature.chat
+package com.filkom.designimplementation.viewmodel.feature.chat
 import com.filkom.designimplementation.BotDock
 
 data class ChatUiState(

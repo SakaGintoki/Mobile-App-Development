@@ -27,7 +27,8 @@ import com.filkom.designimplementation.typography.Poppins
 @Composable
 fun HomeScreen(
     onOpenLittleAI: () -> Unit = {},
-    onNavigate: (String) -> Unit = {} // "home","history","cart","profile"
+    onNavigate: (String) -> Unit = {}, // "home","history","cart","profile"
+    onOpenMarketplace: () -> Unit // <-- NEW: Add navigation function for Marketplace
 ) {
     Scaffold(
         bottomBar = {
@@ -47,6 +48,7 @@ fun HomeScreen(
                 .padding(padding)
         ) {
             // ===== Header (reuse header.png) =====
+            // Note: R.drawable.header must be available
             Image(
                 painter = painterResource(R.drawable.header),
                 contentDescription = null,
@@ -119,6 +121,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // GUNAKAN DRAWABLE LITTLE AI
+                    // Note: R.drawable.littleai must be available
                     Image(
                         painter = painterResource(R.drawable.littleai),
                         contentDescription = "Little-AI",
@@ -144,7 +147,7 @@ fun HomeScreen(
                 }
             }
 
-            // ===== Kategori (placeholder) =====
+            // ===== Kategori (marketplace is here) =====
             Spacer(Modifier.height(18.dp))
             Text(
                 text = "Kategori",
@@ -161,10 +164,10 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                CategoryItem("E-Sitter")   // TODO: set icon drawable
-                CategoryItem("Konsultasi") // TODO: set icon drawable
-                CategoryItem("Belanja")    // TODO: set icon drawable
-                CategoryItem("Daycare")    // TODO: set icon drawable
+                CategoryItem("E-Sitter", onClick = { /* TODO: E-Sitter action */ })
+                CategoryItem("Konsultasi", onClick = { /* TODO: Konsultasi action */ })
+                CategoryItem("Belanja", onClick = onOpenMarketplace) // <-- HOOKED HERE
+                CategoryItem("Daycare", onClick = { /* TODO: Daycare action */ })
             }
 
             // ===== Banner & rekomendasi (placeholder) =====
@@ -190,8 +193,11 @@ fun HomeScreen(
 }
 
 @Composable
-private fun CategoryItem(title: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun CategoryItem(title: String, onClick: () -> Unit) { // <-- Modified to accept onClick
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() } // <-- Apply click listener here
+    ) {
         // TODO: ganti dengan icon kategori (drawable) sesuai desain
         Box(
             modifier = Modifier
@@ -199,7 +205,11 @@ private fun CategoryItem(title: String) {
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFFF1F1F1)),
             contentAlignment = Alignment.Center
-        ) { Text("🔖", fontSize = 18.sp) } // placeholder emoji
+        ) {
+            // Using a simple shopping bag icon for Belanja placeholder
+            val icon = if (title == "Belanja") "🛍️" else "🔖"
+            Text(icon, fontSize = 18.sp)
+        }
         Spacer(Modifier.height(6.dp))
         Text(title, fontFamily = Poppins, fontSize = 12.sp, color = Color(0xFF6A6A6B))
     }
@@ -235,6 +245,7 @@ private fun HomeBottomBar(
                         .background(Color(0xFFF987C5)),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Note: R.drawable.ic_littlesteps_logo must be available
                     Image(
                         painter = painterResource(R.drawable.ic_littlesteps_logo),
                         contentDescription = "Little-AI",

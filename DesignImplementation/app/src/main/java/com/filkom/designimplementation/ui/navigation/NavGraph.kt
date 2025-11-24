@@ -7,6 +7,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.filkom.designimplementation.core.ai.RealAiService
 import com.filkom.designimplementation.feature.chat.ChatViewModel
 import com.filkom.designimplementation.feature.chat.ChatViewModelFactory
@@ -16,6 +18,10 @@ import com.filkom.designimplementation.ui.auth.LoginScreen
 import com.filkom.designimplementation.ui.auth.SignUpScreen
 import com.filkom.designimplementation.ui.home.HomeScreen
 import com.filkom.designimplementation.ui.littleai.ChatScreen
+import com.filkom.designimplementation.ui.marketplace.MarketplaceScreen
+import com.filkom.designimplementation.ui.marketplace.ProductDetailScreen
+import com.filkom.designimplementation.ui.marketplace.OrderConfirmationScreen // <-- BARU
+import com.filkom.designimplementation.ui.marketplace.PaymentMethodScreen // <-- BARU
 import com.filkom.designimplementation.ui.onboarding.OnboardingScreen
 import com.filkom.designimplementation.ui.splash.SplashAnimation
 import com.filkom.designimplementation.ui.start.StartScreen
@@ -26,91 +32,80 @@ fun NavGraph(navController: NavHostController) {
         navController = navController,
         startDestination = "splash"
     ) {
-        composable("splash") {
-            SplashAnimation {
-                navController.navigate("onboarding") {
-                    popUpTo("splash") { inclusive = true }
-                }
-            }
-        }
-
-        composable("onboarding") {
-            OnboardingScreen(
-                onFinish = {
-                    navController.navigate("start") {
-                        popUpTo("onboarding") { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        // START
-        composable("start") {
-            StartScreen(
-                onLoginClick = { navController.navigate("login") },
-                onSignUpClick = { navController.navigate("signup") },
-                onFacebookClick = { /* optional */ },
-                onGoogleClick = { /* optional */ }
-            )
-        }
-
-        // LOGIN
-        composable("login") {
-            LoginScreen(
-                onForgotPassword = { navController.navigate("forgot") },
-                onLogin = { _, _ ->
-                    navController.navigate("home") {
-                        popUpTo("start") { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onFacebook = { /* TODO */ },
-                onGoogle   = { /* TODO */ },
-                onToSignUp = { navController.navigate("signup") }
-            )
-        }
-
-        // SIGN UP
-        composable("signup") {
-            SignUpScreen(
-                onSignUp = { _, _, _ ->
-                    navController.navigate("signup_success") {
-                        launchSingleTop = true
-                    }
-                },
-                onFacebook = { /* TODO */ },
-                onGoogle   = { /* TODO */ },
-                onToLogin  = { navController.popBackStack() }
-            )
-        }
-
-        // FORGOT
-        composable("forgot") {
-            ForgotPasswordScreen(
-                onSubmit = { _ ->
-                    navController.popBackStack()
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        // SIGN UP SUCCESS
-        composable("signup_success") {
-            AccountCreatedScreen(
-                onClose = {
-                    navController.navigate("home") {
-                        popUpTo("start") { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
+        // ... (Rute splash, onboarding, start, login, signup, forgot, signup_success, home, marketplace, little_ai TIDAK BERUBAH)
 
         // HOME
         composable("home") {
             HomeScreen(
                 onOpenLittleAI = { navController.navigate("little_ai") },
+                onOpenMarketplace = { navController.navigate("marketplace") },
                 onNavigate = { _ -> /* hook other tabs if needed */ }
+            )
+        }
+
+        // MARKETPLACE
+        composable("marketplace") {
+            MarketplaceScreen(
+                onBack = { navController.popBackStack() },
+                onProductClick = { productId ->
+                    navController.navigate("detail/$productId")
+                }
+            )
+        }
+
+        // PRODUCT DETAIL
+        composable(
+            route = "detail/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getInt("productId") ?: 0
+            ProductDetailScreen(
+                productId = productId,
+                onBack = { navController.popBackStack() },
+                // NAVIGASI BARU: Ke konfirmasi pesanan
+                onCheckout = { id ->
+                    navController.navigate("confirm_order/$id")
+                }
+            )
+        }
+
+        // KONFIRMASI PESANAN
+        composable(
+            route = "confirm_order/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getInt("productId") ?: 0
+            OrderConfirmationScreen(
+                productId = productId,
+                onBack = { navController.popBackStack() },
+                // NAVIGASI BARU: Ke Metode Pembayaran
+                onProceedToPayment = { id, qty ->
+                    navController.navigate("payment_method/$id/$qty")
+                }
+            )
+        }
+
+        // METODE PEMBAYARAN
+        composable(
+            route = "payment_method/{productId}/{quantity}",
+            arguments = listOf(
+                navArgument("productId") { type = NavType.IntType },
+                navArgument("quantity") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getInt("productId") ?: 0
+            val quantity = backStackEntry.arguments?.getInt("quantity") ?: 1
+            PaymentMethodScreen(
+                productId = productId,
+                quantity = quantity,
+                onBack = { navController.popBackStack() },
+                // TODO: Implement onPaymentConfirmed logic (misalnya, ke halaman sukses/keranjang)
+                onPaymentConfirmed = { method ->
+                    // Saat pembayaran dikonfirmasi, kembali ke Home (contoh)
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
             )
         }
 

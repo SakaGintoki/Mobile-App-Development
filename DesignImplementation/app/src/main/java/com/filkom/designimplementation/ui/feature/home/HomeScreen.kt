@@ -184,7 +184,11 @@ fun HomeScreen(
                     onClick = { onNavigate("shop") }
                 )
 
-                CategoryItem(Icons.Outlined.Store, "Daycare")
+                CategoryItem(
+                    icon = Icons.Outlined.Store,
+                    title = "Daycare",
+                    onClick = { onNavigate("daycare_list") }
+                )
 
                 CategoryItem(
                     icon = Icons.Outlined.Money,

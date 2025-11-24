@@ -111,7 +111,7 @@ fun HistoryItemCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ... (Bagian Header Row dan Image Row TETAP SAMA, tidak berubah) ...
+            // --- HEADER (Kategori & Tanggal) ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,14 +125,30 @@ fun HistoryItemCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text(item.category, fontFamily = Poppins, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF6A6A6B))
+                    Text(
+                        text = item.category,
+                        fontFamily = Poppins,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF6A6A6B)
+                    )
                 }
-                Text(item.date, fontFamily = Poppins, fontSize = 10.sp, color = Color(0xFF9E9E9E))
+                // Tanggal transaksi di pojok kanan atas
+                Text(
+                    text = item.date,
+                    fontFamily = Poppins,
+                    fontSize = 10.sp,
+                    color = Color(0xFF9E9E9E)
+                )
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // --- BODY (Gambar & Judul) ---
+            Row(
+                verticalAlignment = Alignment.CenterVertically, // Tetap di tengah secara vertikal agar rapi
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 AsyncImage(
                     model = item.imageUrl,
                     contentDescription = null,
@@ -140,31 +156,46 @@ fun HistoryItemCard(
                     placeholder = painterResource(R.drawable.ic_launcher_background),
                     error = painterResource(R.drawable.ic_launcher_background),
                     modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(Color.Gray.copy(alpha = 0.1f))
                 )
 
                 Spacer(Modifier.width(16.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
+                // KOLOM TEXT JUDUL
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 4.dp)
+                ) {
                     Text(
                         text = item.title,
                         fontFamily = Poppins,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
-                        maxLines = 1,
+
+
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp,
+
                         color = Color(0xFF333333)
                     )
+
                     Spacer(Modifier.height(4.dp))
-                    Text(text = item.historyId, fontFamily = Poppins, fontSize = 10.sp, color = Color.Gray)
+
+                    Text(
+                        text = "ID: ${item.historyId}",
+                        fontFamily = Poppins,
+                        fontSize = 10.sp,
+                        color = Color.Gray
+                    )
                 }
             }
 
             Spacer(Modifier.height(16.dp))
 
-            // === BAGIAN BAWAH (LOGIKA REVIEW) ===
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -172,16 +203,19 @@ fun HistoryItemCard(
             ) {
                 Column {
                     Text("Total Belanja", fontFamily = Poppins, fontSize = 10.sp, color = Color.Gray)
-                    Text(formatRupiah(item.total), fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF333333))
+                    Text(
+                        text = formatRupiah(item.total),
+                        fontFamily = Poppins,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color(0xFF333333)
+                    )
                 }
 
                 if (item.status == "Berhasil") {
-                    // 1. CEK APAKAH INI DONASI?
                     if (item.category.equals("Donasi", ignoreCase = true)) {
-                        // Jika Donasi, tampilkan status badge saja (atau kosongkan jika mau blank)
                         StatusBadge(status = item.status)
                     }
-                    // 2. JIKA BUKAN DONASI, CEK APAKAH SUDAH DI-REVIEW?
                     else if (item.reviewed) {
                         Surface(
                             color = Color(0xFFEEEEEE),
@@ -195,9 +229,7 @@ fun HistoryItemCard(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             )
                         }
-                    }
-                    // 3. JIKA BELUM DI-REVIEW, TAMPILKAN TOMBOL
-                    else {
+                    } else {
                         OutlinedButton(
                             onClick = onRateClick,
                             shape = RoundedCornerShape(8.dp),
@@ -209,7 +241,6 @@ fun HistoryItemCard(
                         }
                     }
                 } else {
-                    // Jika status Gagal/Pending
                     StatusBadge(status = item.status)
                 }
             }

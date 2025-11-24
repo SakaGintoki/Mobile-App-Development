@@ -31,6 +31,8 @@ import com.filkom.designimplementation.ui.feature.checkout.CheckoutScreen
 import com.filkom.designimplementation.ui.feature.checkout.PaymentMethodScreen
 import com.filkom.designimplementation.ui.feature.consultation.ConsultationDetailScreen
 import com.filkom.designimplementation.ui.feature.consultation.ConsultationListScreen
+import com.filkom.designimplementation.ui.feature.daycare.DaycareDetailScreen
+import com.filkom.designimplementation.ui.feature.daycare.DaycareListScreen
 import com.filkom.designimplementation.ui.feature.donation.DonationDetailScreen
 import com.filkom.designimplementation.ui.feature.donation.DonationListScreen
 import com.filkom.designimplementation.ui.feature.esitter.ESitterDetailScreen
@@ -52,6 +54,7 @@ import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModel
 import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModelFactory
 import com.filkom.designimplementation.viewmodel.feature.checkout.CheckoutViewModel
 import com.filkom.designimplementation.viewmodel.feature.consultation.ConsultationViewModel
+import com.filkom.designimplementation.viewmodel.feature.daycare.DaycareViewModel
 import com.filkom.designimplementation.viewmodel.feature.esitter.ESitterViewModel
 import com.filkom.designimplementation.viewmodel.feature.profile.ProfileViewModel
 
@@ -441,6 +444,34 @@ fun NavGraph(
                 onBookNow = { doctor, date, time ->
                     checkoutViewModel.prepareConsultationCheckout(doctor, date, time)
                     navController.navigate("checkout?mode=consultation")
+                }
+            )
+        }
+
+        // --- DAYCARE ROUTES ---
+
+        composable("daycare_list") {
+            val daycareViewModel: DaycareViewModel = viewModel()
+            DaycareListScreen(
+                viewModel = daycareViewModel,
+                onBack = { navController.popBackStack() },
+                onItemClick = { id -> navController.navigate("daycare_detail/$id") }
+            )
+        }
+
+        composable(
+            route = "daycare_detail/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val daycareViewModel: DaycareViewModel = viewModel()
+            val id = backStackEntry.arguments?.getString("id") ?: ""
+            DaycareDetailScreen(
+                daycareId = id,
+                viewModel = daycareViewModel,
+                onBack = { navController.popBackStack() },
+                onBookNow = { daycare, date ->
+                    checkoutViewModel.prepareDaycareCheckout(daycare, date)
+                    navController.navigate("payment_method")
                 }
             )
         }

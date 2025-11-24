@@ -44,4 +44,13 @@ class DonationRepository {
             emptyList()
         }
     }
+
+    fun incrementViewCount(donationId: String) {
+        try {
+            val docRef = firestore.collection("donations").document(donationId)
+            docRef.update("viewCount", com.google.firebase.firestore.FieldValue.increment(1))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }

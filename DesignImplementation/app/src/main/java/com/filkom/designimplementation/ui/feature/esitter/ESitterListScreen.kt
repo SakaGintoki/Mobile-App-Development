@@ -24,8 +24,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -170,11 +173,17 @@ fun ESitterTopBar(
             )
             Spacer(Modifier.width(16.dp))
             Text(
-                text = "Rumah $name", // Hardcoded sesuai gambar
+                buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = Color(0xFF673AB7), fontWeight = FontWeight.Bold)) {
+                        append("Rumah ")
+                    }
+                    withStyle(style = SpanStyle(color = Pink, fontWeight = FontWeight.Bold)) {
+                        append("$name!")
+                    }
+                },
+                fontSize = 16.sp,
                 fontFamily = Poppins,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Pink
+                lineHeight = 20.sp
             )
         }
 

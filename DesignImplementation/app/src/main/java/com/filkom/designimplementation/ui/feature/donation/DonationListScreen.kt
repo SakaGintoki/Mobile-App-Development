@@ -22,8 +22,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -141,30 +144,27 @@ fun DonationTopBar(
     CenterAlignedTopAppBar(
         title = {
             Text(
-                "Halo $name!!",
+                buildAnnotatedString {
+                    withStyle(style = SpanStyle(
+                        color = Color(0xFF673AB7),
+                        fontWeight = FontWeight.Bold
+                    )
+                    ) {
+                        append("Ingin berdonasi, ")
+                    }
+                    withStyle(style = SpanStyle(color = Pink, fontWeight = FontWeight.Bold)) {
+                        append("$name?")
+                    }
+                },
+                fontSize = 16.sp,
                 fontFamily = Poppins,
-                fontWeight = FontWeight.Bold,
-                color = Pink, // Warna Pink judul
-                fontSize = 18.sp
+                lineHeight = 20.sp
             )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Pink)
             }
-        },
-        actions = {
-            // Profile Picture Circle
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_background), // Ganti dengan gambar user
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .border(1.dp, Color.Gray, CircleShape)
-            )
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
     )

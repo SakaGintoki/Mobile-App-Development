@@ -7,12 +7,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import com.filkom.designimplementation.data.repository.CartRepository
 import com.filkom.designimplementation.data.repository.ConsultationRepository
+import com.filkom.designimplementation.data.repository.DaycareRepository
 import com.filkom.designimplementation.data.repository.DonationRepository
 import com.filkom.designimplementation.data.repository.HistoryRepository
 import com.filkom.designimplementation.data.repository.ProductRepository
 import com.filkom.designimplementation.data.repository.SitterRepository
 import com.filkom.designimplementation.data.repository.UserRepository
 import com.filkom.designimplementation.model.data.consultation.Doctor
+import com.filkom.designimplementation.model.data.daycare.Daycare
 import com.filkom.designimplementation.model.data.donation.Donation
 import com.filkom.designimplementation.model.data.product.CartItem
 import com.filkom.designimplementation.model.data.history.HistoryTransaction
@@ -33,7 +35,8 @@ enum class CheckoutType {
     DIRECT_BUY,
     ESITTER,
     DONATION,
-    CONSULTATION
+    CONSULTATION,
+    DAYCARE
 }
 
 class CheckoutViewModel : ViewModel() {
@@ -45,6 +48,7 @@ class CheckoutViewModel : ViewModel() {
     private val donationRepository = DonationRepository()
     private val consultationRepository = ConsultationRepository()
 
+    private val daycareRepository = DaycareRepository()
 
     private val auth = FirebaseAuth.getInstance()
 
@@ -131,6 +135,21 @@ class CheckoutViewModel : ViewModel() {
         )
         _checkoutItems.value = listOf(tempItem)
     }
+
+    fun prepareDaycareCheckout(daycare: Daycare, startDate: String) {
+        checkoutType = CheckoutType.DAYCARE
+
+        val tempItem = CartItem(
+            id = "temp_daycare_${System.currentTimeMillis()}",
+            productId = daycare.id,
+            name = "${daycare.name} (Mulai: $startDate)",
+            imageUrl = daycare.imageUrl,
+            price = daycare.price,
+            quantity = 1, // Default 1 (misal 1 hari/1 bulan)
+            isSelected = true
+        )
+        _checkoutItems.value = listOf(tempItem)
+    }
     fun getSubtotal(): Double = _checkoutItems.value.sumOf { it.price * it.quantity }
     fun getTotalPayment(): Double = getSubtotal() + adminFee
 
@@ -158,6 +177,7 @@ class CheckoutViewModel : ViewModel() {
                         CheckoutType.ESITTER -> "E-Sitter"
                         CheckoutType.DONATION -> "Donasi"
                         CheckoutType.CONSULTATION -> "Konsultasi"
+                        CheckoutType.DAYCARE -> "Daycare"
                         else -> "Belanja"
                     }
                     val itemTotal = item.price * item.quantity
@@ -180,12 +200,19 @@ class CheckoutViewModel : ViewModel() {
                         CheckoutType.ESITTER -> {
                             sitterRepository.incrementCompletedJobs(item.productId)
                         }
+
                         CheckoutType.DONATION -> {
                             donationRepository.updateCurrentAmount(item.productId, item.price)
                         }
+
                         CheckoutType.CONSULTATION -> {
                             consultationRepository.incrementPatientCount(item.productId)
                         }
+
+                        CheckoutType.DAYCARE -> {
+                            daycareRepository.incrementBookingCount(item.productId)
+                        }
+
                         else -> {
                             productRepository.incrementSold(item.productId, item.quantity)
                         }

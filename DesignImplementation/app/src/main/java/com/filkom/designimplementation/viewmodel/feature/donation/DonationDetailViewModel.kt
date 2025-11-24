@@ -22,16 +22,17 @@ class DonationDetailViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<DonationDetailUiState>(DonationDetailUiState.Loading)
     val uiState: StateFlow<DonationDetailUiState> = _uiState.asStateFlow()
 
-    // Fungsi yang dipanggil saat screen dibuka
+
     fun getDonationDetail(id: String) {
         viewModelScope.launch {
+            repository.incrementViewCount(id)
+
             _uiState.value = DonationDetailUiState.Loading
             val result = repository.getDonationById(id)
-
             if (result != null) {
                 _uiState.value = DonationDetailUiState.Success(result)
             } else {
-                _uiState.value = DonationDetailUiState.Error("Data donasi tidak ditemukan")
+                _uiState.value = DonationDetailUiState.Error("Data tidak ditemukan")
             }
         }
     }

@@ -12,7 +12,8 @@
         android:label="LittleSteps"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.App.Starting">
+        android:theme="@style/Theme.App.Starting"
+        android:windowSoftInputMode="adjustResize">
 
     <!--        android:theme="@style/Theme.DesignImplementation">-->
 

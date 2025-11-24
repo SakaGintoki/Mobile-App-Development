@@ -3,13 +3,15 @@ package com.filkom.designimplementation.ui.feature.littleai
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -24,20 +26,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.filkom.designimplementation.BotDock
-import com.filkom.designimplementation.model.data.ai.ChatMessage
-import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModel
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.model.data.ai.ChatMessage
+import com.filkom.designimplementation.ui.theme.* // Pastikan import warna sesuai
+import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModel
 import kotlinx.coroutines.launch
-import com.filkom.designimplementation.ui.theme.*
+import androidx.compose.ui.text.TextStyle
+// --- DUMMY COLORS (Hapus jika sudah ada di ui/theme/Color.kt) ---
+// val Pink = Color(0xFFFF4081)
+// val Primary200 = Color(0xFFEEEEEE)
+// val Primary400 = Color(0xFFBDBDBD)
+// val Primary500 = Color(0xFF9E9E9E)
+// ----------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,85 +62,55 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
+    // Logic untuk scroll ke bawah saat pesan bertambah atau keyboard muncul
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
     var dock by rememberSaveable(stateSaver = BotDock.saver()) {
         mutableStateOf<BotDock>(BotDock.TopBar)
     }
 
-    LaunchedEffect(messages.size) {
-        scope.launch { listState.animateScrollToItem(maxOf(messages.size - 1, 0)) }
-    }
-
-    // Container Utama (Tanpa Scaffold)
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Primary200)
-    ) {
-        // 1. TOP BAR
-        CenterAlignedTopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (dock is BotDock.TopBar) {
-                        BotAvatar(size = 28.dp, onClick = { dock = BotDock.next(dock) })
+    Scaffold(
+        containerColor = Primary200,
+        topBar = {
+            ChatTopBar(dock = dock, onBack = onBack, onAvatarClick = { dock = BotDock.next(dock) })
+        },
+        bottomBar = {
+            ChatBottomBar(
+                value = input,
+                onValueChange = { input = it },
+                onSend = {
+                    if (input.isNotBlank()) {
+                        vm.send(input)
+                        input = ""
                     }
-                    Text("Little AI", color = Primary500, fontWeight = FontWeight.SemiBold)
                 }
-            },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Primary400)
-                }
-            },
-            actions = {
-                IconButton(onClick = { /* TODO menu */ }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Primary400)
-                }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-        )
-
-        // 2. CONTENT AREA (Mengisi sisa ruang)
+            )
+        }
+    ) { paddingValues ->
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            // Watermark
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_littlesteps_logo),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(180.dp)
-                        .alpha(0.12f),
-                    contentScale = ContentScale.Fit
-                )
+            if (messages.isEmpty()) {
+                EmptyStateWatermark()
             }
 
-            // List Pesan
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
-                state = listState
+                state = listState,
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
+                // Header Pesan Pembuka
                 if (dock is BotDock.HeaderLeft) {
                     item {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                        ) {
-                            BotAvatar(size = 40.dp, onClick = { dock = BotDock.next(dock) })
-                            Text("Halo, aku Little AI. Ceritakan kebutuhanmu ya 💗", color = Primary400)
-                        }
+                        BotGreetingItem(onClick = { dock = BotDock.next(dock) })
                     }
                 }
 
@@ -136,23 +118,194 @@ fun ChatScreen(
                     MessageBubble(m)
                     Spacer(Modifier.height(8.dp))
                 }
-                item { Spacer(Modifier.height(96.dp)) }
             }
-
-            // --- BAGIAN AVATAR MELAYANG SUDAHDIHAPUS DISINI ---
         }
+    }
+}
 
-        // 3. BOTTOM BAR (Input)
-        BottomBar(
-            value = input,
-            onValueChange = { input = it },
-            onSend = { vm.send(input).also { input = "" } },
-            dock = dock,
-            onAvatarClick = { dock = BotDock.next(dock) }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatTopBar(dock: BotDock, onBack: () -> Unit, onAvatarClick: () -> Unit) {
+    CenterAlignedTopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Little AI", color = Primary500, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Primary500)
+            }
+        },
+        actions = {
+            IconButton(onClick = { /* TODO menu */ }) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = Primary500)
+            }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = Primary200.copy(alpha = 0.95f) // Sedikit transparan
+        )
+    )
+}
+
+@Composable
+fun EmptyStateWatermark() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_littlesteps_logo),
+            contentDescription = null,
+            modifier = Modifier
+                .size(150.dp)
+                .alpha(0.1f),
+            contentScale = ContentScale.Fit
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Mulai percakapan dengan Little AI",
+            color = Primary400,
+            fontSize = 14.sp
         )
     }
 }
 
+@Composable
+fun BotGreetingItem(onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.padding(vertical = 16.dp)
+    ) {
+        BotAvatar(size = 40.dp, onClick = onClick)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Text(
+                text = "Halo! Aku Little AI.\nCeritakan kebutuhanmu ya 💗",
+                modifier = Modifier.padding(12.dp),
+                color = Color(0xFF333333),
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageBubble(m: ChatMessage) {
+    val isUser = m.fromUser
+    val bg = if (isUser) Pink else Color.White
+    val contentColor = if (isUser) Color.White else Color(0xFF333333)
+
+    // Shape bubble lebih modern
+    val shape = if (isUser)
+        RoundedCornerShape(topStart = 18.dp, topEnd = 4.dp, bottomEnd = 18.dp, bottomStart = 18.dp)
+    else
+        RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomEnd = 18.dp, bottomStart = 18.dp)
+
+    val displayText = if (isUser) m.text else m.text.stripBasicMarkdown()
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+    ) {
+        if (!isUser) {
+            // Opsi: Tampilkan avatar kecil di sebelah bubble bot jika diinginkan
+            // BotAvatar(size = 24.dp, onClick = {})
+            // Spacer(Modifier.width(8.dp))
+        }
+
+        Surface(
+            shape = shape,
+            color = bg,
+            shadowElevation = 2.dp,
+            modifier = Modifier.widthIn(max = 300.dp)
+        ) {
+            Text(
+                text = displayText,
+                color = contentColor,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+@Composable
+private fun ChatBottomBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit
+) {
+    Surface(
+        color = Pink,
+        shadowElevation = 8.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(top = 16.dp, bottom = 16.dp, start = 12.dp, end = 12.dp),
+
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+
+            IconAction(Icons.Outlined.CameraAlt)
+            IconAction(Icons.Outlined.Image)
+
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                maxLines = 4,
+                textStyle = TextStyle(fontSize = 14.sp, color = Color.Black),
+                modifier = Modifier
+                    .weight(1f)
+                    .background(Color.White, RoundedCornerShape(50))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                decorationBox = { innerTextField ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (value.isEmpty()) {
+                            Text("Ketik pesan...", fontSize = 14.sp, color = Color.Gray)
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+            IconButton(
+                onClick = onSend,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Send,
+                    contentDescription = "Send",
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun IconAction(icon: ImageVector) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = Color.White,
+        modifier = Modifier
+            .size(26.dp)
+            .clickable { /* Handle click */ }
+    )
+}
 @Composable
 private fun BotAvatar(
     size: Dp,
@@ -162,148 +315,31 @@ private fun BotAvatar(
     Box(
         modifier = modifier
             .size(size)
+            .shadow(2.dp, CircleShape)
             .clip(CircleShape)
-            .background(Pink)
-            .clickable (
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ){ onClick() },
+            .background(Color.White) // Background putih agar logo jelas
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
+        // Border ring (opsional)
+        Box(Modifier.matchParentSize().background(Pink.copy(alpha = 0.1f)))
+
         Image(
-            painter = painterResource(R.drawable.ic_littlesteps_logo),
+            painter = painterResource(R.drawable.ic_littlesteps_logo_notext),
             contentDescription = "Bot",
-            modifier = Modifier.fillMaxSize(0.7f),
+            modifier = Modifier.fillMaxSize(0.8f),
             contentScale = ContentScale.Fit
         )
     }
 }
 
-@Composable
-private fun MessageBubble(m: ChatMessage) {
-    val isUser = m.fromUser
-    val bg = if (isUser) Pink else Color.White
-    val fg = if (isUser) Color.White else Color(0xFF333333)
-    val shape = if (isUser)
-        RoundedCornerShape(topStart = 20.dp, topEnd = 4.dp, bottomEnd = 20.dp, bottomStart = 20.dp)
-    else
-        RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp)
-
-    val displayText = if (isUser) m.text else m.text.stripBasicMarkdown()
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-    ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .clip(shape)
-                .background(bg)
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-        ) {
-            Text(displayText, color = fg)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BottomBar(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onSend: () -> Unit,
-    dock: BotDock,
-    onAvatarClick: () -> Unit
-) {
-    Surface(
-        color = Pink,
-        shadowElevation = 12.dp,
-        tonalElevation = 0.dp,
-//        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .imePadding() // Padding otomatis saat keyboard muncul
-                .padding(
-                    start = 14.dp,
-                    end = 14.dp,
-                    top = 10.dp,
-                    bottom = WindowInsets.navigationBars
-                        .asPaddingValues()
-                        .calculateBottomPadding()
-                        .coerceAtLeast(12.dp) // Padding aman navigasi bawah
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            CircleIcon(Icons.Outlined.CameraAlt) {}
-            CircleIcon(Icons.Outlined.Image) {}
-
-            if (dock is BotDock.InputLeading) {
-                BotAvatar(size = 32.dp, onClick = onAvatarClick)
-            }
-
-            TextField(
-                value = value,
-                onValueChange = onValueChange,
-                placeholder = { Text("Masukkan text") },
-                singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Primary200),
-                trailingIcon = {
-                    IconButton(onClick = { /* voice */ }) {
-                        Icon(Icons.Outlined.Mic, contentDescription = "Mic", tint = Pink)
-                    }
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Primary200,
-                    unfocusedContainerColor = Primary200,
-                    disabledContainerColor = Primary200,
-                    cursorColor = Pink,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                )
-            )
-
-            IconButton(
-                onClick = onSend,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-            ) {
-                Icon(Icons.Filled.Send, contentDescription = "Send", tint = Pink)
-            }
-        }
-    }
-}
-
-@Composable
-private fun CircleIcon(icon: ImageVector, onClick: () -> Unit) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(Color.White)
-    ) {
-        Icon(icon, contentDescription = null, tint = Pink)
-    }
-}
-
+// Utility untuk Markdown sederhana
 private fun String.stripBasicMarkdown(): String = this
-    .replace(Regex("""\*\*(.*?)\*\*"""), "$1")
-    .replace(Regex("""__(.*?)__"""), "$1")
-    .replace(Regex("""\*(.*?)\*"""), "$1")
-    .replace(Regex("""_(.*?)_"""), "$1")
-    .replace(Regex("""`([^`]+)`"""), "$1")
-    .replace(Regex("""\[(.*?)]\((.*?)\)"""), "$1")
-    .replace("""\\""", "\\")
-    .replace("""\(""", "")
-    .replace("""\)""", "")
-    .replace("""\[""", "")
-    .replace("""\]""", "")
+    .replace(Regex("""\*\*(.*?)\*\*"""), "$1") // Bold
+    .replace(Regex("""__(.*?)__"""), "$1")     // Bold
+    .replace(Regex("""\*(.*?)\*"""), "$1")     // Italic
+    .replace(Regex("""_(.*?)_"""), "$1")       // Italic
+    .replace(Regex("""`([^`]+)`"""), "$1")     // Code
+    .replace(Regex("""\[(.*?)]\((.*?)\)"""), "$1") // Link
+    // Hapus karakter escape yang tidak perlu
+    .replace("""\""", "")

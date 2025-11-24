@@ -2,8 +2,10 @@ package com.filkom.designimplementation.viewmodel.feature.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.filkom.designimplementation.data.repository.ConsultationRepository
 import com.filkom.designimplementation.data.repository.HistoryRepository
-import com.filkom.designimplementation.data.repository.ProductRepository // 1. Tambahkan Import ini
+import com.filkom.designimplementation.data.repository.ProductRepository
+import com.filkom.designimplementation.data.repository.SitterRepository
 import com.filkom.designimplementation.model.data.history.HistoryTransaction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,8 +16,9 @@ class HistoryViewModel : ViewModel() {
 
     private val repository = HistoryRepository()
 
-    // 2. Tambahkan Repository Produk (Untuk update rating)
     private val productRepository = ProductRepository()
+    private val sitterRepository = SitterRepository()
+    private val consultationRepository = ConsultationRepository()
 
     private val _historyItems = MutableStateFlow<List<HistoryTransaction>>(emptyList())
     val historyItems: StateFlow<List<HistoryTransaction>> = _historyItems.asStateFlow()
@@ -31,14 +34,19 @@ class HistoryViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             repository.getUserHistoryFlow().collect { items ->
-                _historyItems.value = items
+                val sortedItems = items.sortedByDescending { it.date }
+                _historyItems.value = sortedItems
                 _isLoading.value = false
             }
         }
     }
-    fun submitReview(transactionId: String, productId: String, rating: Int) {
+    fun submitReview(transactionId: String, itemId: String, rating: Int, category: String?) {
         viewModelScope.launch {
-            productRepository.submitRating(productId, rating)
+            when (category) {
+                "Konsultasi" -> consultationRepository.submitRating(itemId, rating)
+                "E-Sitter" -> sitterRepository.submitRating(itemId, rating) // Buat fungsi serupa di SitterRepository
+                "Belanja" -> productRepository.submitRating(itemId, rating) // Buat fungsi serupa di ProductRepository
+            }
             repository.setTransactionReviewed(transactionId)
         }
     }

@@ -43,13 +43,14 @@ fun HistoryScreen(
     var showRatingDialog by remember { mutableStateOf(false) }
     var selectedProductId by remember { mutableStateOf("") }
     var selectedTransactionId by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("") }
 
     if (showRatingDialog) {
         RatingDialog(
             onDismiss = { showRatingDialog = false },
             onSubmit = { rating ->
                 // Panggil ViewModel dengan ID Produk yang benar
-                viewModel.submitReview(selectedTransactionId, selectedProductId, rating)
+                viewModel.submitReview(selectedTransactionId, selectedProductId, rating, selectedCategory)
                 showRatingDialog = false
             }
         )
@@ -89,6 +90,7 @@ fun HistoryScreen(
                         onRateClick = {
                             selectedProductId = item.productId
                             selectedTransactionId = item.id
+                            selectedCategory = item.category
                             showRatingDialog = true
                         }
                     )
@@ -97,7 +99,6 @@ fun HistoryScreen(
         }
     }
 }
-
 @Composable
 fun HistoryItemCard(
     item: HistoryTransaction,
@@ -110,6 +111,7 @@ fun HistoryItemCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // ... (Bagian Header Row dan Image Row TETAP SAMA, tidak berubah) ...
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -117,7 +119,7 @@ fun HistoryItemCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_littlesteps_logo), // Icon tas belanja
+                        painter = painterResource(R.drawable.ic_littlesteps_logo),
                         contentDescription = null,
                         tint = Color.Gray,
                         modifier = Modifier.size(16.dp)
@@ -156,12 +158,13 @@ fun HistoryItemCard(
                         color = Color(0xFF333333)
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text(text = item.id, fontFamily = Poppins, fontSize = 10.sp, color = Color.Gray)
+                    Text(text = item.historyId, fontFamily = Poppins, fontSize = 10.sp, color = Color.Gray)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
 
+            // === BAGIAN BAWAH (LOGIKA REVIEW) ===
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -171,8 +174,15 @@ fun HistoryItemCard(
                     Text("Total Belanja", fontFamily = Poppins, fontSize = 10.sp, color = Color.Gray)
                     Text(formatRupiah(item.total), fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF333333))
                 }
+
                 if (item.status == "Berhasil") {
-                    if (item.reviewed) {
+                    // 1. CEK APAKAH INI DONASI?
+                    if (item.category.equals("Donasi", ignoreCase = true)) {
+                        // Jika Donasi, tampilkan status badge saja (atau kosongkan jika mau blank)
+                        StatusBadge(status = item.status)
+                    }
+                    // 2. JIKA BUKAN DONASI, CEK APAKAH SUDAH DI-REVIEW?
+                    else if (item.reviewed) {
                         Surface(
                             color = Color(0xFFEEEEEE),
                             shape = RoundedCornerShape(8.dp)
@@ -185,7 +195,9 @@ fun HistoryItemCard(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             )
                         }
-                    } else {
+                    }
+                    // 3. JIKA BELUM DI-REVIEW, TAMPILKAN TOMBOL
+                    else {
                         OutlinedButton(
                             onClick = onRateClick,
                             shape = RoundedCornerShape(8.dp),
@@ -197,13 +209,13 @@ fun HistoryItemCard(
                         }
                     }
                 } else {
+                    // Jika status Gagal/Pending
                     StatusBadge(status = item.status)
                 }
             }
         }
     }
 }
-
 @Composable
 fun StatusBadge(status: String) {
     val (bgColor, textColor) = when (status) {

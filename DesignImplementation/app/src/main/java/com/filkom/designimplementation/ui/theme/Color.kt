@@ -84,13 +84,18 @@ val Success900 = Color(0xFF14532D)
 // Tambahkan ini agar kode lama (Pink, TextClr, dll) tidak error
 // dan otomatis menggunakan palet baru ini.
 
-val Pink = Primary400        // Menggantikan warna Pink lama
 val TextClr = Black900       // Menggantikan warna Text hitam lama
 val TextGray = Black500      // Warna teks abu-abu
 val BorderClr = Neutral200   // Warna garis batas/border
 val Red = Primary400        // Menggantikan warna Pink lama
 val Green = Success600
 // Gradient Helpers (Opsional, diambil dari Primary & Secondary)
+val Pink = Primary400        // Menggantikan warna Pink lama
+val PinkPrimary = Color(0xFFFF69B4) // Pink Utama
+val PinkSoft = Color(0xFFFFF0F5)     // Pink Background Lembut
+val PinkSurface = Color(0xFFFFFBFC)  // Background Halaman
+val TextPrimary = Color(0xFF1A1A1A)  // Hitam tidak pekat (lebih enak di mata)
+val TextSecondary = Color(0xFF757575)
 
 val primaryGradient= listOf(
     Color(0xFFa75fbf),

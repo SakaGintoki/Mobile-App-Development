@@ -35,11 +35,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImage // Pastikan pakai coil.compose
 import com.filkom.designimplementation.R
 import com.filkom.designimplementation.model.data.product.Product
+import com.filkom.designimplementation.ui.components.formatRupiah
 import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
+import com.filkom.designimplementation.viewmodel.data.UserDataViewModel
 import com.filkom.designimplementation.viewmodel.feature.shop.ShopViewModel
 import java.text.NumberFormat
 import java.util.Locale
@@ -47,13 +49,17 @@ import java.util.Locale
 @Composable
 fun ShopScreen(
     viewModel: ShopViewModel = viewModel(),
+    viewModelUser: UserDataViewModel = viewModel(),
     onNavigateToDetail: (String) -> Unit = {}, // ID Produk
     onNavigateToCart: () -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onNavigateToAdd: () -> Unit = {}
 ) {
     val products by viewModel.products.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
+    // 1. AMBIL DATA USER DARI VIEWMODEL
+    val user by viewModelUser.userState.collectAsState()
     // Kategori Tabs
     val categories = listOf("Semua", "Suplemen", "Kebutuhan", "Vitamin", "Obat", "Alat")
 
@@ -61,12 +67,11 @@ fun ShopScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF9F9F9))
-            .statusBarsPadding() // Agar tidak ketutup status bar
+            .statusBarsPadding()
     ) {
         // 1. Top Bar Custom (Search & Icons)
         ShopTopBar(onCartClick = onNavigateToCart, onBack = onBack)
 
-        // 2. Content Grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(16.dp),
@@ -74,11 +79,13 @@ fun ShopScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            // --- Header Section (Wallet, Banner, Categories) ---
-            // Kita gunakan span { GridItemSpan(2) } agar header lebar penuh
-
+            // Header Section: Wallet
             item(span = { GridItemSpan(2) }) {
-                WalletSection()
+
+                WalletSection(
+                    balance = user?.balance ?: 0.0,
+                    points = user?.points ?: 0
+                )
             }
 
             item(span = { GridItemSpan(2) }) {
@@ -134,12 +141,14 @@ fun ShopTopBar(onCartClick: () -> Unit, onBack: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Back Button (Opsional, jika ini halaman utama mungkin tidak perlu)
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Back",
             tint = Pink,
-            modifier = Modifier.clickable { onBack() }
+            modifier = Modifier.clickable (
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ){ onBack() }
         )
 
         Spacer(Modifier.width(12.dp))
@@ -163,7 +172,6 @@ fun ShopTopBar(onCartClick: () -> Unit, onBack: () -> Unit) {
 
         Spacer(Modifier.width(16.dp))
 
-        // Icons
         Icon(Icons.Outlined.Notifications, null, tint = Pink, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(12.dp))
         Icon(
@@ -172,20 +180,45 @@ fun ShopTopBar(onCartClick: () -> Unit, onBack: () -> Unit) {
             tint = Pink,
             modifier = Modifier
                 .size(26.dp)
-                .clickable { onCartClick() }
+                .clickable (
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onCartClick() }
         )
     }
 }
 
+// 3. UPDATE WALLET SECTION MENERIMA PARAMETER
 @Composable
-fun WalletSection() {
+fun WalletSection(
+    balance: Double,
+    points: Int
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        WalletItem(iconBg = Color(0xFFE8F5E9), iconColor = Color(0xFF2E7D32), icon = Icons.Default.AccountBalanceWallet, text = "Rp1.000.000")
-        WalletItem(iconBg = Color(0xFFE3F2FD), iconColor = Color(0xFF1565C0), icon = Icons.Default.MonetizationOn, text = "460 Poin")
-        WalletItem(iconBg = Color(0xFFF3E5F5), iconColor = Color(0xFF7B1FA2), icon = Icons.Default.ConfirmationNumber, text = "Cek Voucher")
+        // Tampilkan Saldo
+        WalletItem(
+            iconBg = Color(0xFFE8F5E9),
+            iconColor = Color(0xFF2E7D32),
+            icon = Icons.Default.AccountBalanceWallet,
+            text = formatRupiah(balance)
+        )
+        // Tampilkan Poin
+        WalletItem(
+            iconBg = Color(0xFFE3F2FD),
+            iconColor = Color(0xFF1565C0),
+            icon = Icons.Default.MonetizationOn,
+            text = "$points Poin"
+        )
+        // Voucher (Tetap Statis)
+        WalletItem(
+            iconBg = Color(0xFFF3E5F5),
+            iconColor = Color(0xFF7B1FA2),
+            icon = Icons.Default.ConfirmationNumber,
+            text = "Cek Voucher"
+        )
     }
 }
 
@@ -228,7 +261,6 @@ fun BannerSection() {
             modifier = Modifier.fillMaxSize().alpha(0.8f)
         )
 
-        // Text Overlay
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -250,7 +282,6 @@ fun BannerSection() {
         }
     }
 
-    // Dots indicator (Dummy)
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.Center
@@ -293,10 +324,12 @@ fun ProductCardItem(product: Product, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable (
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
     ) {
         Column(modifier = Modifier.padding(bottom = 12.dp)) {
-            // Image & Like Button
             Box {
                 AsyncImage(
                     model = product.mainImage,
@@ -320,7 +353,6 @@ fun ProductCardItem(product: Product, onClick: () -> Unit) {
                     }
                 }
 
-                // Like Button (Thumb Up)
                 Surface(
                     shape = CircleShape,
                     color = Color.White,
@@ -343,16 +375,14 @@ fun ProductCardItem(product: Product, onClick: () -> Unit) {
 
                 Spacer(Modifier.height(4.dp))
 
-                // Price
                 Text(
-                    text = formatShopRupiah(product.price),
+                    text = formatRupiah(product.price),
                     fontFamily = Poppins,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = Color(0xFF9C27B0) // Warna ungu seperti di gambar
+                    color = Color(0xFF9C27B0)
                 )
 
-                // Discount Row
                 if (product.discount > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -364,7 +394,7 @@ fun ProductCardItem(product: Product, onClick: () -> Unit) {
                         }
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = formatShopRupiah(product.originalPrice),
+                            text = formatRupiah(product.originalPrice),
                             fontFamily = Poppins,
                             fontSize = 10.sp,
                             textDecoration = TextDecoration.LineThrough,
@@ -387,9 +417,4 @@ fun ProductCardItem(product: Product, onClick: () -> Unit) {
             }
         }
     }
-}
-
-fun formatShopRupiah(amount: Double): String {
-    val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return format.format(amount).replace("Rp", "Rp ").replace(",00", "")
 }

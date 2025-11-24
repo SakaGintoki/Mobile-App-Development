@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -131,7 +132,6 @@ fun PaymentMethodScreen(
                     }
                 }
             }
-
             item { Spacer(Modifier.height(100.dp)) }
         }
     }
@@ -142,7 +142,10 @@ fun PaymentOptionCard(name: String, isSelected: Boolean, onSelect: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
+            .clickable (
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onSelect() }
             .border(1.dp, if (isSelected) Pink else Color.LightGray, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = if (isSelected) Color(0xFFFFF0F5) else Color.White),
         shape = RoundedCornerShape(12.dp)
@@ -162,7 +165,10 @@ fun PaymentOptionItem(name: String, isSelected: Boolean, onSelect: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
+            .clickable (
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onSelect() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

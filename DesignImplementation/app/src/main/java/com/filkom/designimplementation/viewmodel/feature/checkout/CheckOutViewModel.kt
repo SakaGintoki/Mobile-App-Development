@@ -2,14 +2,23 @@ package com.filkom.designimplementation.viewmodel.feature.checkout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import com.filkom.designimplementation.data.repository.CartRepository
+import com.filkom.designimplementation.data.repository.ConsultationRepository
+import com.filkom.designimplementation.data.repository.DonationRepository
 import com.filkom.designimplementation.data.repository.HistoryRepository
+import com.filkom.designimplementation.data.repository.ProductRepository
+import com.filkom.designimplementation.data.repository.SitterRepository
 import com.filkom.designimplementation.data.repository.UserRepository
+import com.filkom.designimplementation.model.data.consultation.Doctor
+import com.filkom.designimplementation.model.data.donation.Donation
 import com.filkom.designimplementation.model.data.product.CartItem
 import com.filkom.designimplementation.model.data.history.HistoryTransaction
 import com.filkom.designimplementation.model.data.product.Product
+import com.filkom.designimplementation.model.data.sitter.Sitter
+import com.filkom.designimplementation.utils.IdGenerator.generateUniqueIdHistory
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,31 +28,44 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class CheckoutType {
+    CART,
+    DIRECT_BUY,
+    ESITTER,
+    DONATION,
+    CONSULTATION
+}
+
 class CheckoutViewModel : ViewModel() {
     private val cartRepository = CartRepository()
     private val userRepository = UserRepository()
     private val historyRepository = HistoryRepository()
+    private val sitterRepository = SitterRepository()
+    private val productRepository = ProductRepository()
+    private val donationRepository = DonationRepository()
+    private val consultationRepository = ConsultationRepository()
+
+
     private val auth = FirebaseAuth.getInstance()
 
-    // State Data
     private val _checkoutItems = MutableStateFlow<List<CartItem>>(emptyList())
     val checkoutItems: StateFlow<List<CartItem>> = _checkoutItems.asStateFlow()
 
-    private var isDirectBuy = false
+    private var checkoutType = CheckoutType.CART
 
-    // State UI & Payment
-    var selectedPaymentMethod by androidx.compose.runtime.mutableStateOf<String?>(null)
-    var paymentType by androidx.compose.runtime.mutableStateOf("external")
-    var transactionState by androidx.compose.runtime.mutableStateOf<String?>(null)
-    var errorMessage by androidx.compose.runtime.mutableStateOf("")
+    var selectedPaymentMethod by mutableStateOf<String?>(null)
+    var paymentType by mutableStateOf("external")
+    var transactionState by mutableStateOf<String?>(null)
+    var errorMessage by mutableStateOf("")
+
     val adminFee = 7000.0
 
+    // ... (Fungsi prepareCartCheckout, prepareDirectCheckout, prepareSitterCheckout SAMA) ...
+
     fun prepareCartCheckout() {
-        isDirectBuy = false
+        checkoutType = CheckoutType.CART
         viewModelScope.launch {
-            // Ambil item yang dicentang dari Database Keranjang
             cartRepository.getCartItemsFlow().collect { items ->
-                // Hanya update jika belum ada item (untuk menghindari refresh loop)
                 if (_checkoutItems.value.isEmpty()) {
                     _checkoutItems.value = items.filter { it.isSelected }
                 }
@@ -51,9 +73,8 @@ class CheckoutViewModel : ViewModel() {
         }
     }
 
-    // --- MODE 2: BELI LANGSUNG (BELI SEKARANG) ---
     fun prepareDirectCheckout(product: Product) {
-        isDirectBuy = true
+        checkoutType = CheckoutType.DIRECT_BUY
         val tempItem = CartItem(
             id = "temp_direct",
             productId = product.id,
@@ -66,62 +87,122 @@ class CheckoutViewModel : ViewModel() {
         _checkoutItems.value = listOf(tempItem)
     }
 
-    // Hitung Total
+    fun prepareSitterCheckout(sitter: Sitter, date: String, time: String) {
+        checkoutType = CheckoutType.ESITTER
+        val tempItem = CartItem(
+            id = "temp_sitter_${System.currentTimeMillis()}",
+            productId = sitter.id,
+            name = "${sitter.name} ($date - $time)",
+            imageUrl = sitter.imageUrl,
+            price = sitter.price,
+            quantity = 1,
+            isSelected = true
+        )
+        _checkoutItems.value = listOf(tempItem)
+    }
+
+    fun prepareDonationCheckout(donation: Donation, nominal: Double) {
+        checkoutType = CheckoutType.DONATION
+
+        val tempItem = CartItem(
+            id = "temp_donation_${System.currentTimeMillis()}",
+            productId = donation.id, // Ini ID Donasinya
+            name = donation.title,
+            imageUrl = donation.imageUrl,
+            price = nominal, // Nominal yang diinput user
+            quantity = 1,
+            isSelected = true
+        )
+        _checkoutItems.value = listOf(tempItem)
+    }
+
+    fun prepareConsultationCheckout(doctor: Doctor, date: String, time: String) {
+        checkoutType = CheckoutType.CONSULTATION
+
+        // Buat item sementara untuk checkout
+        val tempItem = CartItem(
+            id = "temp_consult_${System.currentTimeMillis()}",
+            productId = doctor.id,
+            name = "Konsultasi: ${doctor.name} ($date - $time)", // Judul transaksi
+            imageUrl = doctor.imageUrl,
+            price = doctor.price,
+            quantity = 1,
+            isSelected = true
+        )
+        _checkoutItems.value = listOf(tempItem)
+    }
     fun getSubtotal(): Double = _checkoutItems.value.sumOf { it.price * it.quantity }
     fun getTotalPayment(): Double = getSubtotal() + adminFee
 
-    // Proses Pembayaran Toko
     fun processPayment() {
         val userId = auth.currentUser?.uid ?: return
         val total = getTotalPayment()
+        val date = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date())
 
         viewModelScope.launch {
             transactionState = "loading"
+
+            // 1. PROSES POTONG SALDO / POINT
             val success = if (paymentType == "internal") {
-                val points = (total * 0.01).toInt()
+                val points = (total * 0.02).toInt()
                 userRepository.processTransaction(userId, total, points)
             } else {
-                true
+                val points = (total * 0.01).toInt()
+                userRepository.processTransaction(userId, 0.0, points)
             }
 
             if (success) {
-                createHistoryRecords(userId)
                 _checkoutItems.value.forEach { item ->
-                    com.filkom.designimplementation.data.repository.ProductRepository()
-                        .incrementSold(item.productId, item.quantity)
+
+                    val categoryString = when (checkoutType) {
+                        CheckoutType.ESITTER -> "E-Sitter"
+                        CheckoutType.DONATION -> "Donasi"
+                        CheckoutType.CONSULTATION -> "Konsultasi"
+                        else -> "Belanja"
+                    }
+                    val itemTotal = item.price * item.quantity
+
+                    val transaction = HistoryTransaction(
+                        userId = userId,
+                        productId = item.productId,
+                        historyId = generateUniqueIdHistory(),
+                        title = item.name,
+                        date = date,
+                        total = if (_checkoutItems.value.size == 1) total else itemTotal,
+                        status = "Berhasil",
+                        imageUrl = item.imageUrl,
+                        category = categoryString,
+                        reviewed = false
+                    )
+                    historyRepository.createTransaction(transaction)
+
+                    when (checkoutType) {
+                        CheckoutType.ESITTER -> {
+                            sitterRepository.incrementCompletedJobs(item.productId)
+                        }
+                        CheckoutType.DONATION -> {
+                            donationRepository.updateCurrentAmount(item.productId, item.price)
+                        }
+                        CheckoutType.CONSULTATION -> {
+                            consultationRepository.incrementPatientCount(item.productId)
+                        }
+                        else -> {
+                            productRepository.incrementSold(item.productId, item.quantity)
+                        }
+                    }
                 }
 
-                if (!isDirectBuy) {
+                // 5. HAPUS DARI KERANJANG (HANYA JIKA TIPE = CART)
+                if (checkoutType == CheckoutType.CART) {
                     val cartIds = _checkoutItems.value.map { it.id }
                     cartRepository.deleteItems(cartIds)
                 }
 
                 transactionState = "success"
             } else {
-                errorMessage = "Saldo tidak cukup atau gagal."
+                errorMessage = "Saldo tidak mencukupi."
                 transactionState = "failed"
             }
-        }
-    }
-
-
-
-    private suspend fun createHistoryRecords(userId: String) {
-        val items = _checkoutItems.value
-        val date = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date())
-
-        items.forEach { item ->
-            val transaction = HistoryTransaction(
-                userId = userId,
-                productId = item.productId,
-                title = "${item.name} (${item.quantity}x)",
-                date = date,
-                total = (item.price * item.quantity),
-                status = "Berhasil",
-                imageUrl = item.imageUrl,
-                category = "Belanja"
-            )
-            historyRepository.createTransaction(transaction)
         }
     }
 }

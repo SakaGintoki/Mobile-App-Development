@@ -35,8 +35,8 @@ fun CheckoutScreen(
 ) {
     val checkoutItems by viewModel.checkoutItems.collectAsState()
     val subtotal = checkoutItems.sumOf { it.price * it.quantity }
-    val totalPayment = subtotal + viewModel.adminFee
-
+    val adminFee = viewModel.adminFee
+    val totalPayment = subtotal + adminFee
     Scaffold(
         containerColor = Color(0xFFF9F9F9),
         topBar = {
@@ -139,7 +139,10 @@ fun CheckoutScreen(
                 Text("Ringkasan belanjamu", fontFamily = Poppins, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 SummaryRow("Total Harga", subtotal)
-                SummaryRow("Total Biaya proteksi", 3000.0)
+
+                // GUNAKAN VARIABLE adminFee
+                SummaryRow("Total Biaya proteksi", adminFee)
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),

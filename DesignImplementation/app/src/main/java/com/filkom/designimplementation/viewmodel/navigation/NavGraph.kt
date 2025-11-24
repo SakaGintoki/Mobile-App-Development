@@ -1,5 +1,6 @@
 package com.filkom.designimplementation.viewmodel.navigation
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -8,7 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,45 +23,58 @@ import androidx.navigation.navArgument
 import com.filkom.designimplementation.R
 import com.filkom.designimplementation.model.core.ai.RealAiService
 import com.filkom.designimplementation.model.data.product.Product
-import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModel
-import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModelFactory
 import com.filkom.designimplementation.ui.auth.*
 import com.filkom.designimplementation.ui.components.FailedScreen
 import com.filkom.designimplementation.ui.components.SuccessScreen
+import com.filkom.designimplementation.ui.feature.cart.CartScreen
+import com.filkom.designimplementation.ui.feature.checkout.CheckoutScreen
+import com.filkom.designimplementation.ui.feature.checkout.PaymentMethodScreen
+import com.filkom.designimplementation.ui.feature.consultation.ConsultationDetailScreen
+import com.filkom.designimplementation.ui.feature.consultation.ConsultationListScreen
+import com.filkom.designimplementation.ui.feature.donation.DonationDetailScreen
+import com.filkom.designimplementation.ui.feature.donation.DonationListScreen
+import com.filkom.designimplementation.ui.feature.esitter.ESitterDetailScreen
+import com.filkom.designimplementation.ui.feature.esitter.ESitterListScreen
+import com.filkom.designimplementation.ui.feature.history.HistoryScreen
 import com.filkom.designimplementation.ui.feature.home.HomeScreen
 import com.filkom.designimplementation.ui.feature.littleai.ChatScreen
-import com.filkom.designimplementation.ui.onboarding.OnboardingScreen
+import com.filkom.designimplementation.ui.feature.profile.EditProfileScreen
 import com.filkom.designimplementation.ui.feature.profile.ProfileScreen
+import com.filkom.designimplementation.ui.feature.shop.AddProductScreen
+import com.filkom.designimplementation.ui.feature.shop.ProductDetailScreen
+import com.filkom.designimplementation.ui.feature.shop.ShopScreen
+import com.filkom.designimplementation.ui.onboarding.OnboardingScreen
 import com.filkom.designimplementation.ui.splash.SplashScreen
 import com.filkom.designimplementation.ui.start.StartScreen
 import com.filkom.designimplementation.viewmodel.auth.LoginState
 import com.filkom.designimplementation.viewmodel.auth.LoginViewModel
-import com.filkom.designimplementation.ui.feature.cart.CartScreen
-import com.filkom.designimplementation.ui.feature.checkout.CheckoutScreen
-import com.filkom.designimplementation.ui.feature.checkout.PaymentMethodScreen
-import com.filkom.designimplementation.ui.feature.history.HistoryScreen
-import com.filkom.designimplementation.ui.feature.profile.EditProfileScreen
-import com.filkom.designimplementation.ui.feature.shop.ProductDetailScreen
-import com.filkom.designimplementation.ui.feature.shop.ShopScreen
+import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModel
+import com.filkom.designimplementation.viewmodel.feature.chat.ChatViewModelFactory
 import com.filkom.designimplementation.viewmodel.feature.checkout.CheckoutViewModel
+import com.filkom.designimplementation.viewmodel.feature.consultation.ConsultationViewModel
+import com.filkom.designimplementation.viewmodel.feature.esitter.ESitterViewModel
 import com.filkom.designimplementation.viewmodel.feature.profile.ProfileViewModel
 
-
 @Composable
-
 fun NavGraph(
     navController: NavHostController,
     isUserLoggedIn: Boolean,
     modifier: Modifier = Modifier
 ) {
     val animDuration = 400
-    var tempDirectBuyProduct: Product? = remember { null }
+
+    // --- SHARED STATE & VIEWMODELS ---
+    // 1. Variabel sementara untuk menyimpan produk yang "Beli Langsung"
+    var tempDirectBuyProduct by remember { mutableStateOf<Product?>(null) }
+
+    // 2. Checkout ViewModel di-Hoisting (diangkat) ke sini
+    // Agar satu instance dipakai bersama oleh: Shop, Sitter, Checkout, dan Payment
+    val checkoutViewModel: CheckoutViewModel = viewModel()
 
     NavHost(
         navController = navController,
         startDestination = "splash",
         modifier = modifier,
-
         enterTransition = {
             slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(animDuration))
         },
@@ -77,11 +93,8 @@ fun NavGraph(
         }
     ) {
 
-
-        composable(
-            route = "splash",
-            exitTransition = { fadeOut(tween(500)) }
-        ) {
+        // ==================== AUTH & ONBOARDING ====================
+        composable(route = "splash", exitTransition = { fadeOut(tween(500)) }) {
             SplashScreen {
                 if (isUserLoggedIn) {
                     navController.navigate("home") { popUpTo("splash") { inclusive = true } }
@@ -91,12 +104,7 @@ fun NavGraph(
             }
         }
 
-
-
-        composable(
-            route = "onboarding",
-            exitTransition = { fadeOut(tween(animDuration)) }
-        ) {
+        composable(route = "onboarding", exitTransition = { fadeOut(tween(animDuration)) }) {
             OnboardingScreen(
                 onFinish = {
                     navController.navigate("start") { popUpTo("onboarding") { inclusive = true } }
@@ -104,11 +112,7 @@ fun NavGraph(
             )
         }
 
-
-        composable(
-            route = "start",
-            enterTransition = { fadeIn(tween(animDuration)) }
-        ) {
+        composable(route = "start", enterTransition = { fadeIn(tween(animDuration)) }) {
             val context = LocalContext.current
             val loginViewModel: LoginViewModel = viewModel()
             val loginState by loginViewModel.loginState.collectAsState()
@@ -128,16 +132,14 @@ fun NavGraph(
                     val webClientId = context.getString(R.string.web_client_id)
                     loginViewModel.signInWithGoogle(context, webClientId)
                 },
-
                 onSuccess = {
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                    navController.navigate("home") {
+                        popUpTo("start") { inclusive = true }
                         launchSingleTop = true
                     }
                 }
             )
         }
-
 
         composable("login") {
             val context = LocalContext.current
@@ -163,39 +165,29 @@ fun NavGraph(
                     val webClientId = context.getString(R.string.web_client_id)
                     loginViewModel.signInWithGoogle(context, webClientId)
                 },
-                onSuccess = {},
+                onSuccess = {}, // Handled by LaunchedEffect
                 onFailed = { message -> println("Login gagal: $message") },
                 onToSignUp = { navController.navigate("signup") }
             )
         }
 
-
         composable("signup") {
             val context = LocalContext.current
-
             SignUpScreen(
-                onSuccess = { userId, email, name ->
+                onSuccess = { _, _, _ ->
                     navController.navigate("signup_success") {
                         popUpTo("signup") { inclusive = true }
                         launchSingleTop = true
                     }
                 },
-
                 onFailed = { errorMessage ->
-                    android.widget.Toast.makeText(
-                        context,
-                        "Gagal: $errorMessage",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(context, "Gagal: $errorMessage", Toast.LENGTH_LONG).show()
                 },
-
                 onFacebook = { /* TODO */ },
-                onGoogle = { /* TODO: Logic di dalam screen sudah handle ini */ },
+                onGoogle = { /* TODO */ },
                 onToLogin = { navController.popBackStack() }
             )
         }
-
-
 
         composable("signup_success") {
             SuccessScreen(
@@ -210,16 +202,12 @@ fun NavGraph(
             )
         }
 
-
-
         composable("signup_failed") {
             FailedScreen(
                 title = "Gagal Membuat Akun",
                 description = "Terjadi kesalahan koneksi atau data tidak valid. Silakan coba lagi.",
                 buttonText = "Coba Lagi",
-                onButtonClick = {
-                    navController.popBackStack()
-                }
+                onButtonClick = { navController.popBackStack() }
             )
         }
 
@@ -235,9 +223,14 @@ fun NavGraph(
             SuccessScreen(
                 title = "Pembayaran Berhasil",
                 description = "Transaksi kamu sudah diproses. Terima kasih telah menggunakan layanan kami.",
-                onButtonClick = { navController.navigate("home") }
+                onButtonClick = {
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = false }
+                    }
+                }
             )
         }
+
         composable("forgot") {
             ForgotPasswordScreen(
                 onSubmit = { navController.popBackStack() },
@@ -245,10 +238,11 @@ fun NavGraph(
             )
         }
 
+        // ==================== MAIN FEATURES ====================
+
         composable("home") {
             HomeScreen(
                 onOpenLittleAI = { navController.navigate("little_ai") },
-
                 onNavigate = { destination ->
                     if (destination == "shop") {
                         navController.navigate("shop")
@@ -260,19 +254,27 @@ fun NavGraph(
                         }
                     }
                 },
-
                 onProductClick = { productId ->
                     navController.navigate("product_detail/$productId")
                 }
             )
         }
+
         composable("shop") {
             ShopScreen(
                 onNavigateToCart = { navController.navigate("cart") },
-
                 onNavigateToDetail = { productId ->
                     navController.navigate("product_detail/$productId")
                 },
+                onBack = { navController.popBackStack() },
+                // Jika Anda membuat fitur tambah produk:
+                onNavigateToAdd = { navController.navigate("add_product") }
+            )
+        }
+
+        // Fitur Tambah Produk (Hanya Admin)
+        composable("add_product") {
+            AddProductScreen(
                 onBack = { navController.popBackStack() }
             )
         }
@@ -282,8 +284,8 @@ fun NavGraph(
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId")
-            val detailViewModel: com.filkom.designimplementation.viewmodel.feature.shop.ProductDetailViewModel =
-                viewModel()
+            val detailViewModel: com.filkom.designimplementation.viewmodel.feature.shop.ProductDetailViewModel = viewModel()
+            val context = LocalContext.current
 
             LaunchedEffect(productId) {
                 if (productId != null) {
@@ -296,11 +298,15 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onAddToCart = {
                     val product = detailViewModel.productState.value
-                    if (product != null) detailViewModel.addToCart(product)
+                    if (product != null) {
+                        detailViewModel.addToCart(product)
+                        Toast.makeText(context, "Masuk Keranjang", Toast.LENGTH_SHORT).show()
+                    }
                 },
                 onBuyNow = {
                     val product = detailViewModel.productState.value
                     if (product != null) {
+                        // Simpan ke temp variabel untuk diambil CheckoutScreen
                         tempDirectBuyProduct = product
                         navController.navigate("checkout?mode=direct")
                     }
@@ -311,8 +317,9 @@ fun NavGraph(
         composable("profile") {
             val profileViewModel: ProfileViewModel = viewModel()
 
+            // Refresh data profil saat masuk kembali
             LaunchedEffect(Unit) {
-                profileViewModel
+                profileViewModel.fetchUserProfile()
             }
 
             ProfileScreen(
@@ -332,9 +339,7 @@ fun NavGraph(
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                onEditProfile = {
-                    navController.navigate("edit_profile")
-                },
+                onEditProfile = { navController.navigate("edit_profile") },
                 onSettings = { /* TODO */ }
             )
         }
@@ -346,6 +351,7 @@ fun NavGraph(
         }
 
         composable("history") {
+            // Tidak perlu onNavigate karena BottomBar dihandle MainActivity
             HistoryScreen()
         }
 
@@ -358,17 +364,98 @@ fun NavGraph(
             )
         }
 
+        // ==================== E-SITTER FLOW ====================
+
+        composable("esitter_list") {
+            val esitterViewModel: ESitterViewModel = viewModel()
+            ESitterListScreen(
+                viewModel = esitterViewModel,
+                onBack = { navController.popBackStack() },
+                onSitterClick = { sitter ->
+                    esitterViewModel.selectSitter(sitter)
+                    navController.navigate("esitter_detail")
+                }
+            )
+        }
+
+        composable("esitter_detail") {
+            val parentEntry = remember(it) { navController.getBackStackEntry("esitter_list") }
+            val esitterViewModel:ESitterViewModel = viewModel(parentEntry)
+
+            ESitterDetailScreen(
+                viewModel = esitterViewModel,
+                onBack = { navController.popBackStack() },
+                onBookNow = { sitter, date, time ->
+                    checkoutViewModel.prepareSitterCheckout(sitter, date, time)
+                    navController.navigate("checkout?mode=sitter")
+                }
+            )
+        }
+
+        composable("donation_list") {
+            DonationListScreen(
+                onBack = { navController.popBackStack() },
+                onDonationClick = { donationId ->
+                    navController.navigate("donation_detail/$donationId")
+                }
+            )
+        }
+
+        composable(
+            route = "donation_detail/{donationId}",
+            arguments = listOf(navArgument("donationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val donationId = backStackEntry.arguments?.getString("donationId") ?: ""
+
+            DonationDetailScreen(
+                donationId = donationId,
+                checkoutViewModel = checkoutViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToPayment = {
+                    navController.navigate("payment_method")
+                }
+            )
+        }
+
+        composable("consultation_list") {
+            val consultationViewModel: ConsultationViewModel = viewModel()
+            ConsultationListScreen(
+                viewModel = consultationViewModel, // Inject ViewModel yang sama
+                onBack = { navController.popBackStack() },
+                onDoctorClick = { doctorId ->
+                    navController.navigate("consultation_detail/$doctorId")
+                }
+            )
+        }
+
+        composable(
+            route = "consultation_detail/{doctorId}",
+            arguments = listOf(navArgument("doctorId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val consultationViewModel: ConsultationViewModel = viewModel()
+            val doctorId = backStackEntry.arguments?.getString("doctorId") ?: ""
+            ConsultationDetailScreen(
+                doctorId = doctorId,
+                viewModel = consultationViewModel,
+                onBack = { navController.popBackStack() },
+                onBookNow = { doctor, date, time ->
+                    checkoutViewModel.prepareConsultationCheckout(doctor, date, time)
+                    navController.navigate("checkout?mode=consultation")
+                }
+            )
+        }
+        // ==================== CHECKOUT & PAYMENT (SHARED VM) ====================
+
         composable(
             route = "checkout?mode={mode}",
             arguments = listOf(navArgument("mode") { defaultValue = "cart" })
         ) { backStackEntry ->
             val mode = backStackEntry.arguments?.getString("mode") ?: "cart"
-            val checkoutViewModel: CheckoutViewModel = viewModel()
 
             LaunchedEffect(mode) {
                 if (mode == "direct" && tempDirectBuyProduct != null) {
-                    checkoutViewModel.prepareDirectCheckout(tempDirectBuyProduct)
-                } else {
+                    checkoutViewModel.prepareDirectCheckout(tempDirectBuyProduct!!)
+                } else if (mode == "cart") {
                     checkoutViewModel.prepareCartCheckout()
                 }
             }
@@ -380,10 +467,6 @@ fun NavGraph(
         }
 
         composable("payment_method") {
-            val checkoutViewModel: CheckoutViewModel = viewModel(
-                viewModelStoreOwner = navController.previousBackStackEntry!!
-            )
-
             PaymentMethodScreen(
                 viewModel = checkoutViewModel,
                 onBack = { navController.popBackStack() },
@@ -395,6 +478,7 @@ fun NavGraph(
             )
         }
 
+        // ==================== LITTLE AI ====================
 
         composable(
             route = "little_ai",

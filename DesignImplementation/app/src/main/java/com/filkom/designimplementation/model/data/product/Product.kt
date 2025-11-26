@@ -8,6 +8,7 @@ data class CategoryData(
     val name: String = "",
     val slug: String = ""
 )
+
 data class Product(
     val id: String = "",
     val name: String = "",

@@ -10,5 +10,6 @@ data class Donation(
     val targetAmount: Double = 0.0,
     val organizerName: String = "",
     val isVerified: Boolean = false,
-    val description: String = ""
+    val description: String = "",
+    val category: String = "Lainnya"
 )

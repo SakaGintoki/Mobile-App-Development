@@ -8,8 +8,9 @@ data class Sitter(
     val completedJobs: Int = 0,
     val rating: Double = 0.0,
     val reviewCount: Int = 0,
-    val price: Double = 0.0,     // Harga Jasa Murni
+    val price: Double = 0.0,
     val imageUrl: String = "",
     val specialty: String = "Pengasuh Anak",
-    val availableDays: List<String> = emptyList()
+    val availableDays: List<String> = emptyList(),
+    val packages: List<String> = listOf("1 Hari", "3 Hari", "5 Hari")
 )

@@ -55,7 +55,7 @@ class CheckoutViewModel : ViewModel() {
     private val _checkoutItems = MutableStateFlow<List<CartItem>>(emptyList())
     val checkoutItems: StateFlow<List<CartItem>> = _checkoutItems.asStateFlow()
 
-    private var checkoutType = CheckoutType.CART
+    var checkoutType = CheckoutType.CART
 
     var selectedPaymentMethod by mutableStateOf<String?>(null)
     var paymentType by mutableStateOf("external")
@@ -63,6 +63,9 @@ class CheckoutViewModel : ViewModel() {
     var errorMessage by mutableStateOf("")
 
     val adminFee = 7000.0
+
+    private var bookingDateString = ""
+    private var bookingTimeString = ""
 
     // ... (Fungsi prepareCartCheckout, prepareDirectCheckout, prepareSitterCheckout SAMA) ...
 
@@ -93,6 +96,9 @@ class CheckoutViewModel : ViewModel() {
 
     fun prepareSitterCheckout(sitter: Sitter, date: String, time: String) {
         checkoutType = CheckoutType.ESITTER
+        bookingDateString = date
+        bookingTimeString = time
+
         val tempItem = CartItem(
             id = "temp_sitter_${System.currentTimeMillis()}",
             productId = sitter.id,
@@ -122,6 +128,8 @@ class CheckoutViewModel : ViewModel() {
 
     fun prepareConsultationCheckout(doctor: Doctor, date: String, time: String) {
         checkoutType = CheckoutType.CONSULTATION
+        bookingDateString = date // Simpan
+        bookingTimeString = time // Simpan
 
         // Buat item sementara untuk checkout
         val tempItem = CartItem(
@@ -198,22 +206,41 @@ class CheckoutViewModel : ViewModel() {
 
                     when (checkoutType) {
                         CheckoutType.ESITTER -> {
+                            // A. Tambah jumlah job selesai
                             sitterRepository.incrementCompletedJobs(item.productId)
+
+                            // B. KUNCI SLOT (Simpan ke database appointments)
+                            if (bookingDateString.isNotEmpty() && bookingTimeString.isNotEmpty()) {
+                                sitterRepository.saveBookingSlot(
+                                    item.productId,
+                                    bookingDateString,
+                                    bookingTimeString
+                                )
+                            }
+                        }
+
+                        CheckoutType.CONSULTATION -> {
+                            consultationRepository.incrementPatientCount(item.productId)
+
+                            // Logic yang sama untuk Dokter
+                            if (bookingDateString.isNotEmpty() && bookingTimeString.isNotEmpty()) {
+                                consultationRepository.saveBookingSlot(
+                                    item.productId,
+                                    bookingDateString,
+                                    bookingTimeString
+                                )
+                            }
                         }
 
                         CheckoutType.DONATION -> {
                             donationRepository.updateCurrentAmount(item.productId, item.price)
                         }
 
-                        CheckoutType.CONSULTATION -> {
-                            consultationRepository.incrementPatientCount(item.productId)
-                        }
-
                         CheckoutType.DAYCARE -> {
                             daycareRepository.incrementBookingCount(item.productId)
                         }
 
-                        else -> {
+                        else -> { // Cart / Direct Buy
                             productRepository.incrementSold(item.productId, item.quantity)
                         }
                     }

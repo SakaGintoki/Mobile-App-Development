@@ -28,30 +28,55 @@ class ShopViewModel : ViewModel() {
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
     private var allProductsCache: List<Product> = emptyList()
-
+    private var allProductsList: List<Product> = emptyList()
+    private var currentCategoryFilter: String = "Semua"
 
     init {
         fetchProducts()
     }
 
-    private fun fetchProducts() {
+    fun fetchProducts() {
         viewModelScope.launch {
-            productRepository.getAllProductsFlow().collect { result ->
-                allProductsCache = result
-                selectCategory(_selectedCategory.value)
+            // Ambil Data Realtime
+            productRepository.getAllProductsFlow().collect { products ->
+                allProductsList = products // Simpan ke backup
+
+                // Terapkan filter/search ulang jika ada update data
+                selectCategory(currentCategoryFilter)
             }
         }
     }
 
-    // --- FUNGSI FILTER ---
     fun selectCategory(category: String) {
+        currentCategoryFilter = category
         _selectedCategory.value = category
-        if (allProductsCache.isNotEmpty()) {
-            if (category == "Semua") {
-                _products.value = allProductsCache
-            } else {
-                _products.value = allProductsCache.filter { it.category.name == category }
+
+        if (category == "Semua") {
+            _products.value = allProductsList
+        } else {
+            _products.value = allProductsList.filter {
+                // Asumsi field 'category.name' di Firestore
+                it.category.name == category
             }
         }
+    }
+
+    // 2. FUNGSI SEARCH BARU
+    fun searchProducts(query: String) {
+        if (query.isBlank()) {
+            // Jika kosong, kembalikan ke filter kategori aktif
+            selectCategory(currentCategoryFilter)
+            return
+        }
+
+        val lowerQuery = query.lowercase()
+
+        // Filter dari SEMUA produk
+        val searchResults = allProductsList.filter { product ->
+            product.name.lowercase().contains(lowerQuery) ||
+                    product.subtitle.lowercase().contains(lowerQuery)
+        }
+
+        _products.value = searchResults
     }
 }

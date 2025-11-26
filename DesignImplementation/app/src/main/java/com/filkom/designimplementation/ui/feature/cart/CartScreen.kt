@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -289,7 +290,11 @@ fun QuantitySelector(qty: Int, onQtyChange: (Int) -> Unit) {
                 .size(28.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .border(1.dp, if (qty > 1) Pink else Color.LightGray, RoundedCornerShape(6.dp))
-                .clickable(enabled = qty > 1) { onQtyChange(qty - 1) },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = qty > 1
+                ) { onQtyChange(qty - 1) },
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Filled.Remove, null, tint = if (qty > 1) Pink else Color.LightGray, modifier = Modifier.size(16.dp))
@@ -300,7 +305,10 @@ fun QuantitySelector(qty: Int, onQtyChange: (Int) -> Unit) {
                 .size(28.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(Pink)
-                .clickable { onQtyChange(qty + 1) },
+                .clickable (
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onQtyChange(qty + 1) },
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Filled.Add, null, tint = Color.White, modifier = Modifier.size(16.dp))
@@ -316,7 +324,10 @@ fun CustomCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
             .clip(RoundedCornerShape(6.dp))
             .background(if (checked) Pink else Color.Transparent)
             .border(1.5.dp, if (checked) Pink else Color(0xFFCCCCCC), RoundedCornerShape(6.dp))
-            .clickable { onCheckedChange(!checked) },
+            .clickable (
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ){ onCheckedChange(!checked) },
         contentAlignment = Alignment.Center
     ) {
         if (checked) {

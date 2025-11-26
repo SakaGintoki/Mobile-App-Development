@@ -1,5 +1,9 @@
 package com.filkom.designimplementation.ui.feature.daycare
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,10 +28,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -35,10 +38,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.filkom.designimplementation.R
 import com.filkom.designimplementation.model.data.daycare.Daycare
 import com.filkom.designimplementation.ui.components.formatRupiah
 import com.filkom.designimplementation.ui.theme.Pink
@@ -46,6 +48,7 @@ import com.filkom.designimplementation.ui.theme.Poppins
 import com.filkom.designimplementation.ui.theme.TextPrimary
 import com.filkom.designimplementation.viewmodel.data.UserDataViewModel
 import com.filkom.designimplementation.viewmodel.feature.daycare.DaycareViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,8 +60,21 @@ fun DaycareListScreen(
 ) {
     val daycares by viewModel.daycares.collectAsState()
     val user by viewModelUser.userState.collectAsState()
+    val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { viewModel.fetchDaycares() }
+    LaunchedEffect(Unit) {
+        viewModel.fetchDaycares()
+
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            viewModel.getUserLocation(context)
+        }
+    }
 
     Scaffold(
         containerColor = Color(0xFFF8F9FA),
@@ -89,31 +105,51 @@ fun DaycareListScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
 
-            // 1. Search Bar Modern (Floating Shadow)
+            // 2. SEARCH BAR (Diupdate agar bisa diketik)
             Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    shadowElevation = 4.dp, // Efek bayangan
+                    shadowElevation = 4.dp,
                     color = Color.White,
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    ) {
-                        Icon(Icons.Default.Search, null, tint = Color.Gray)
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = "Cari lokasi atau nama daycare...",
+                    // Gunakan TextField dengan warna transparan agar menyatu dengan Surface
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { newValue ->
+                            searchQuery = newValue
+                            viewModel.searchDaycares(newValue)
+                        },
+                        placeholder = {
+                            Text(
+                                "Cari lokasi atau nama daycare...",
+                                fontFamily = Poppins,
+                                color = Color.LightGray,
+                                fontSize = 14.sp
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, null, tint = Color.Gray)
+                        },
+                        // Hilangkan underline/background bawaan TextField
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = Pink
+                        ),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(
                             fontFamily = Poppins,
-                            color = Color.LightGray,
                             fontSize = 14.sp
-                        )
-                    }
+                        ),
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
 
-            // 2. Filter Chips yang lebih rapi
+            var selectedFilter by remember { mutableStateOf("Semua") }
             val filters = listOf("Semua", "Terdekat", "Termurah", "Rating 4+")
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 24.dp),
@@ -121,15 +157,24 @@ fun DaycareListScreen(
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 items(filters) { filter ->
-                    val isSelected = filter == "Semua"
-                    FilterChipItem(text = filter, isSelected = isSelected)
+                    val isSelected = filter == selectedFilter
+
+                    // Ganti FilterChipItem dengan versi interaktif
+                    FilterChipItem(
+                        text = filter,
+                        isSelected = isSelected,
+                        onClick = { // <--- Tambahkan parameter onClick
+                            selectedFilter = filter
+                            viewModel.applyFilter(filter)
+                        }
+                    )
                 }
             }
 
             // 3. List Items
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp) // Jarak antar card lebih lega
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 items(daycares) { daycare ->
                     DaycareCard(daycare, onClick = { onItemClick(daycare.id) })
@@ -140,16 +185,16 @@ fun DaycareListScreen(
 }
 
 @Composable
-fun FilterChipItem(text: String, isSelected: Boolean) {
+fun FilterChipItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(if (isSelected) Pink else Color.White)
             .border(1.dp, if (isSelected) Pink else Color(0xFFE0E0E0), RoundedCornerShape(50))
-            .clickable (
+            .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) { }
+            ) { onClick() } // Panggil onClick disini
             .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
         Text(
@@ -208,7 +253,6 @@ fun DaycareCard(daycare: Daycare, onClick: () -> Unit) {
                     }
                 }
 
-                // Favorite Button (Glassmorphism - Kanan Atas)
                 Box(
                     modifier = Modifier
                         .padding(12.dp)
@@ -249,8 +293,21 @@ fun DaycareCard(daycare: Daycare, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
+
+                    // --- PERBAIKAN FORMAT JARAK ---
+                    val locationText = if (daycare.distanceInKm != null) {
+                        val distance = daycare.distanceInKm
+                        // Format: Menggunakan Locale Indonesia agar pemisah desimalnya "KOMA" (,)
+                        // %.1f artinya ambil 1 angka di belakang koma
+                        val formattedDistance = String.format(Locale("id", "ID"), "%.1f", distance)
+
+                        "$formattedDistance km • ${daycare.location}"
+                    } else {
+                        daycare.location
+                    }
+
                     Text(
-                        text = daycare.location,
+                        text = locationText,
                         fontFamily = Poppins,
                         color = Color.Gray,
                         fontSize = 12.sp,
@@ -258,7 +315,6 @@ fun DaycareCard(daycare: Daycare, onClick: () -> Unit) {
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
                 Spacer(Modifier.height(12.dp))
 
                 HorizontalDivider(color = Color(0xFFF5F5F5))

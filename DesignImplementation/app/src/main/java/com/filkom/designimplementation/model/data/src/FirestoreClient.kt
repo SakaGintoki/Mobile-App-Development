@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlin.String
 
 class FirestoreClient {
     private val tag = "FirestoreClient"
@@ -76,6 +77,7 @@ class FirestoreClient {
             "email" to email,
             "username" to username,
             "phone" to phone,
+            "imageUrl" to imageUrl,
             "role" to role,
             "points" to points,
             "balance" to balance
@@ -92,6 +94,7 @@ class FirestoreClient {
             email = this["email"] as? String ?: "",
             username = this["username"] as? String ?: "",
             phone = this["phone"] as? String ?: "",
+            imageUrl = this["imageUrl"] as? String ?: "",
             role = this["role"] as? String ?: "user",
 
             // Konversi Number

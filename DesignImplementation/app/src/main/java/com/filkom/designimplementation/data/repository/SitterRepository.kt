@@ -12,7 +12,6 @@ class SitterRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val collection = firestore.collection("sitters")
 
-    // Ambil Semua Sitter (Realtime)
     fun getAllSittersFlow(): Flow<List<Sitter>> = callbackFlow {
         val listener = collection.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -27,7 +26,6 @@ class SitterRepository {
         awaitClose { listener.remove() }
     }
 
-    // Update Rating Sitter
     suspend fun submitRating(sitterId: String, userRating: Int) {
         try {
             firestore.runTransaction { transaction ->
@@ -48,14 +46,12 @@ class SitterRepository {
         }
     }
 
-    // Tambah jumlah job selesai (Dipanggil saat checkout sukses)
     suspend fun incrementCompletedJobs(sitterId: String) {
         collection.document(sitterId).update("completedJobs", FieldValue.increment(1)).await()
     }
 
     suspend fun addSitter(sitter: Sitter): Boolean {
         return try {
-            // Firestore otomatis membuat ID dokumen unik
             collection.add(sitter).await()
             true
         } catch (e: Exception) {
@@ -63,4 +59,35 @@ class SitterRepository {
             false
         }
     }
+
+    suspend fun getBookedTimes(sitterId: String, date: String): List<String> {
+        return try {
+            val snapshot = firestore.collection("sitter_appointments") // Boleh beda collection biar rapi
+                .whereEqualTo("sitterId", sitterId)
+                .whereEqualTo("date", date)
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { it.getString("time") }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun saveBookingSlot(sitterId: String, date: String, time: String) {
+        val bookingData = hashMapOf(
+            "sitterId" to sitterId,
+            "date" to date,
+            "time" to time,
+            "createdAt" to com.google.firebase.Timestamp.now()
+        )
+        try {
+            // ID Unik gabungan
+            val uniqueId = "${sitterId}_${date}_${time}"
+            firestore.collection("sitter_appointments").document(uniqueId).set(bookingData).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+
 }

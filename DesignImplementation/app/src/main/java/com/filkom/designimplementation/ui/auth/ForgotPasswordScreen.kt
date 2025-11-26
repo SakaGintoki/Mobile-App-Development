@@ -24,8 +24,6 @@ fun ForgotPasswordScreen(
     var email by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
-
-        // ===== HEADER (gradient image) =====
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -39,7 +37,6 @@ fun ForgotPasswordScreen(
             )
         }
 
-        // ===== Title & subtitle di bawah header =====
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
@@ -48,7 +45,7 @@ fun ForgotPasswordScreen(
         ) {
             Text(
                 text = "Lupa Password?",
-                color = Color(0xFFB1608C), // sesuai tema
+                color = Color(0xFFB1608C),
                 fontFamily = Poppins,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 22.sp
@@ -63,7 +60,7 @@ fun ForgotPasswordScreen(
             )
         }
 
-        // ===== Form =====
+
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier

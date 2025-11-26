@@ -1,5 +1,9 @@
 package com.filkom.designimplementation.ui.feature.daycare
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -26,26 +30,30 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil3.compose.AsyncImage
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.model.common.AppBookingDate
 import com.filkom.designimplementation.model.data.daycare.Daycare
 import com.filkom.designimplementation.ui.components.formatRupiah
+import com.filkom.designimplementation.ui.theme.LightPinkBg
 import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
+import com.filkom.designimplementation.ui.theme.SoftGray
 import com.filkom.designimplementation.ui.theme.TextPrimary
+import com.filkom.designimplementation.ui.theme.TextSecondary
+import com.filkom.designimplementation.utils.DateHelper
 import com.filkom.designimplementation.viewmodel.feature.daycare.DaycareViewModel
+import java.util.Locale
 
-// Model Tanggal
-data class DaycareDate(val day: String, val date: String, val fullDate: String)
 
 // --- Warna Custom untuk UI Modern ---
-val LightPinkBg = Color(0xFFFFF0F5)
-val SoftGray = Color(0xFFF8F9FA)
-val TextSecondary = Color(0xFF757575)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,15 +67,38 @@ fun DaycareDetailScreen(
     val isLoading = viewModel.isLoading.collectAsState().value
 
     var selectedDateIndex by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
 
-    val dates = listOf(
-        DaycareDate("Min", "12", "Minggu, 12 Mei"),
-        DaycareDate("Sen", "13", "Senin, 13 Mei"),
-        DaycareDate("Sel", "14", "Selasa, 14 Mei"),
-        DaycareDate("Rab", "15", "Rabu, 15 Mei"),
-        DaycareDate("Kam", "16", "Kamis, 16 Mei"),
-        DaycareDate("Jum", "17", "Jumat, 17 Mei")
-    )
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        if (isGranted) {
+            viewModel.getUserLocation(context)
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.fetchDaycares()
+
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFineLocation) {
+            viewModel.getUserLocation(context)
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+    val dates = remember { DateHelper.getNext7Days() }
 
     LaunchedEffect(daycareId) {
         viewModel.getDaycareDetail(daycareId)
@@ -81,7 +112,7 @@ fun DaycareDetailScreen(
         Scaffold(
             containerColor = Color.White,
             bottomBar = {
-                ModernDaycareBottomBar(
+                DaycareBottomBar(
                     price = daycare.price,
                     unit = daycare.priceUnit,
                     onBook = { onBookNow(daycare, dates[selectedDateIndex].fullDate) }
@@ -101,7 +132,6 @@ fun DaycareDetailScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
-                    // Gradient Overlay (Agar teks putih terbaca & transisi halus ke bawah)
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -152,11 +182,37 @@ fun DaycareDetailScreen(
                     Text(daycare.name, fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = TextPrimary)
 
                     Spacer(Modifier.height(4.dp))
+//
+//                    Row(verticalAlignment = Alignment.CenterVertically) {
+//                        Icon(Icons.Outlined.LocationOn, null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+//                        Spacer(Modifier.width(4.dp))
+//                        Text(daycare.location, color = TextSecondary, fontSize = 12.sp, fontFamily = Poppins)
+//                    }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.LocationOn, null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Outlined.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text(daycare.location, color = TextSecondary, fontSize = 12.sp, fontFamily = Poppins)
+
+                        // --- PERBAIKAN FORMAT JARAK ---
+                        val locationText = if (daycare.distanceInKm != null) {
+                            val distance = daycare.distanceInKm
+                            // Format: Menggunakan Locale Indonesia agar pemisah desimalnya "KOMA" (,)
+                            // %.1f artinya ambil 1 angka di belakang koma
+                            val formattedDistance = String.format(Locale("id", "ID"), "%.1f", distance)
+
+                            "$formattedDistance km • ${daycare.location}"
+                        } else {
+                            daycare.location
+                        }
+
+                        Text(
+                            text = locationText,
+                            fontFamily = Poppins,
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -167,7 +223,7 @@ fun DaycareDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(dates.size) { index ->
-                            ModernDaySelectorItem(
+                            DaySelectorItem(
                                 dateObj = dates[index],
                                 isSelected = index == selectedDateIndex,
                                 onClick = { selectedDateIndex = index }
@@ -220,10 +276,10 @@ fun DaycareDetailScreen(
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        ModernFacilityItem(Icons.Outlined.AcUnit, "AC")
-                        ModernFacilityItem(Icons.Outlined.Bed, "Kasur")
-                        ModernFacilityItem(Icons.Outlined.Restaurant, "Makan")
-                        ModernFacilityItem(Icons.Outlined.Videocam, "CCTV")
+                        FacilityItem(Icons.Outlined.AcUnit, "AC")
+                        FacilityItem(Icons.Outlined.Bed, "Kasur")
+                        FacilityItem(Icons.Outlined.Restaurant, "Makan")
+                        FacilityItem(Icons.Outlined.Videocam, "CCTV")
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -279,7 +335,7 @@ fun SectionHeader(title: String) {
 }
 
 @Composable
-fun ModernDaySelectorItem(dateObj: DaycareDate, isSelected: Boolean, onClick: () -> Unit) {
+fun DaySelectorItem(dateObj: AppBookingDate, isSelected: Boolean, onClick: () -> Unit) {
     // Menggunakan Card dengan Shadow halus
     Card(
         onClick = onClick,
@@ -313,7 +369,7 @@ fun ModernDaySelectorItem(dateObj: DaycareDate, isSelected: Boolean, onClick: ()
 }
 
 @Composable
-fun ModernFacilityItem(icon: ImageVector, label: String) {
+fun FacilityItem(icon: ImageVector, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -393,9 +449,9 @@ fun GradientActivityCard(title: String, colors: List<Color>, icon: ImageVector, 
 }
 
 @Composable
-fun ModernDaycareBottomBar(price: Double, unit: String, onBook: () -> Unit) {
+fun DaycareBottomBar(price: Double, unit: String, onBook: () -> Unit) {
     Surface(
-        shadowElevation = 24.dp, // Shadow lebih tebal
+        shadowElevation = 24.dp,
         color = Color.White,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {

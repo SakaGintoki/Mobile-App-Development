@@ -1,5 +1,8 @@
 package com.filkom.designimplementation.model.core.ai
 
+import android.util.Log // Import Log Android
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,11 +17,7 @@ class OpenAiService(
 ) : AiService {
 
     @Serializable
-    private data class Req(val model: String,
-                           val messages: List<Msg>,
-                           val temperature: Double = 0.85,
-                           @SerialName("presence_penalty") val presencePenalty: Double = 0.7,
-                           @SerialName("frequency_penalty") val frequencyPenalty: Double = 0.6) {
+    private data class Req(val model: String, val messages: List<Msg>) {
         @Serializable data class Msg(val role: String, val content: String)
     }
     @Serializable
@@ -29,25 +28,41 @@ class OpenAiService(
     }
 
     private val client = OkHttpClient()
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     override suspend fun generateReply(systemPrompt: String, history: List<ChatMsg>): String {
-        val msgs = listOf(Req.Msg("system", systemPrompt)) +
-                history.map { Req.Msg(it.role, it.content) }
-        val body = json.encodeToString(Req.serializer(), Req(model, msgs))
-            .let { RequestBody.create("application/json".toMediaType(), it) }
+        return withContext(Dispatchers.IO) {
+            try {
+                val msgs = listOf(Req.Msg("system", systemPrompt)) +
+                        history.map { Req.Msg(it.role, it.content) }
 
-        val req = Request.Builder()
-            .url("https://api.openai.com/v1/chat/completions")
-            .addHeader("Authorization", "Bearer REDACTED")
-            .post(body)
-            .build()
+                val body = json.encodeToString(Req.serializer(), Req(model, msgs))
+                    .let { RequestBody.create("application/json".toMediaType(), it) }
 
-        client.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) error("OpenAI ${resp.code}: ${resp.message}")
-            val parsed = json.decodeFromString(Res.serializer(), resp.body!!.string())
-            return parsed.choices.firstOrNull()?.message?.content?.trim()
-                ?: "Maaf, aku belum bisa menjawab sekarang."
+                val req = Request.Builder()
+                    .url("https://api.openai.com/v1/chat/completions")
+                    .addHeader("Authorization", "Bearer $apiKey")
+                    .post(body)
+                    .build()
+
+                client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) {
+                        val errorBody = resp.body?.string() ?: "Unknown Error"
+                        Log.e("OpenAI_Error", "Code: ${resp.code}, Body: $errorBody")
+                        return@withContext "Maaf, Little AI sedang mengalami gangguan teknis. Silakan coba lagi beberapa saat lagi ya. \uD83D\uDE4F"
+                    }
+
+                    val responseBody = resp.body!!.string()
+                    val parsed = json.decodeFromString(Res.serializer(), responseBody)
+
+                    parsed.choices.firstOrNull()?.message?.content?.trim()
+                        ?: "Maaf, aku bingung harus menjawab apa."
+                }
+            } catch (e: Exception) {
+                Log.e("OpenAI_Exception", "Error: ${e.message}", e)
+
+                "Sepertinya koneksi internetmu sedang tidak stabil. Cek sinyalmu dulu ya \uD83D\uDCE1"
+            }
         }
     }
 }

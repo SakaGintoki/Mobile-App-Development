@@ -24,7 +24,6 @@ class HistoryRepository {
 
         val listener = firestore.collection("transactions")
             .whereEqualTo("userId", userId)
-//             .orderBy("date", Query.Direction.DESCENDING) // Opsional: Aktifkan jika sudah buat Index di Firestore Console
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)

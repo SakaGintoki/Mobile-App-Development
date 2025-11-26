@@ -5,13 +5,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -21,12 +15,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.data.repository.ChatRepository
 import com.filkom.designimplementation.model.core.ai.RealAiService
 import com.filkom.designimplementation.model.data.product.Product
 import com.filkom.designimplementation.ui.auth.*
 import com.filkom.designimplementation.ui.components.FailedScreen
 import com.filkom.designimplementation.ui.components.SuccessScreen
 import com.filkom.designimplementation.ui.feature.cart.CartScreen
+// Pastikan path import ChatScreenDoctor sesuai dengan lokasi file Anda
+import com.filkom.designimplementation.ui.feature.consultation.chat.ChatScreenDoctor
 import com.filkom.designimplementation.ui.feature.checkout.CheckoutScreen
 import com.filkom.designimplementation.ui.feature.checkout.PaymentMethodScreen
 import com.filkom.designimplementation.ui.feature.consultation.ConsultationDetailScreen
@@ -57,6 +54,7 @@ import com.filkom.designimplementation.viewmodel.feature.consultation.Consultati
 import com.filkom.designimplementation.viewmodel.feature.daycare.DaycareViewModel
 import com.filkom.designimplementation.viewmodel.feature.esitter.ESitterViewModel
 import com.filkom.designimplementation.viewmodel.feature.profile.ProfileViewModel
+import com.filkom.designimplementation.viewmodel.feature.shop.ProductDetailViewModel
 
 @Composable
 fun NavGraph(
@@ -66,13 +64,16 @@ fun NavGraph(
 ) {
     val animDuration = 400
 
-    // --- SHARED STATE & VIEWMODELS ---
-    // 1. Variabel sementara untuk menyimpan produk yang "Beli Langsung"
-    var tempDirectBuyProduct by remember { mutableStateOf<Product?>(null) }
-
-    // 2. Checkout ViewModel di-Hoisting (diangkat) ke sini
-    // Agar satu instance dipakai bersama oleh: Shop, Sitter, Checkout, dan Payment
+    // --- SHARED VIEW MODELS ---
+    // ViewModel ini akan bertahan selama NavHost hidup (sepanjang aplikasi berjalan)
+    // Ini memungkinkan data (seperti keranjang belanjaan checkout) tidak hilang saat navigasi.
     val checkoutViewModel: CheckoutViewModel = viewModel()
+    val consultationViewModel: ConsultationViewModel = viewModel()
+    val esitterViewModel: ESitterViewModel = viewModel()
+    val daycareViewModel: DaycareViewModel = viewModel()
+
+    // Temp data untuk Direct Buy (Beli Langsung Barang)
+    var tempDirectBuyProduct by remember { mutableStateOf<Product?>(null) }
 
     NavHost(
         navController = navController,
@@ -85,6 +86,7 @@ fun NavGraph(
             slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(animDuration))
         },
         popEnterTransition = {
+            // Khusus Little AI tidak pakai animasi slide agar smooth saat back
             if (initialState.destination.route == "little_ai") {
                 androidx.compose.animation.EnterTransition.None
             } else {
@@ -168,7 +170,7 @@ fun NavGraph(
                     val webClientId = context.getString(R.string.web_client_id)
                     loginViewModel.signInWithGoogle(context, webClientId)
                 },
-                onSuccess = {}, // Handled by LaunchedEffect
+                onSuccess = {},
                 onFailed = { message -> println("Login gagal: $message") },
                 onToSignUp = { navController.navigate("signup") }
             )
@@ -270,12 +272,10 @@ fun NavGraph(
                     navController.navigate("product_detail/$productId")
                 },
                 onBack = { navController.popBackStack() },
-                // Jika Anda membuat fitur tambah produk:
                 onNavigateToAdd = { navController.navigate("add_product") }
             )
         }
 
-        // Fitur Tambah Produk (Hanya Admin)
         composable("add_product") {
             AddProductScreen(
                 onBack = { navController.popBackStack() }
@@ -287,7 +287,7 @@ fun NavGraph(
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId")
-            val detailViewModel: com.filkom.designimplementation.viewmodel.feature.shop.ProductDetailViewModel = viewModel()
+            val detailViewModel: ProductDetailViewModel = viewModel()
             val context = LocalContext.current
 
             LaunchedEffect(productId) {
@@ -309,7 +309,6 @@ fun NavGraph(
                 onBuyNow = {
                     val product = detailViewModel.productState.value
                     if (product != null) {
-                        // Simpan ke temp variabel untuk diambil CheckoutScreen
                         tempDirectBuyProduct = product
                         navController.navigate("checkout?mode=direct")
                     }
@@ -320,7 +319,6 @@ fun NavGraph(
         composable("profile") {
             val profileViewModel: ProfileViewModel = viewModel()
 
-            // Refresh data profil saat masuk kembali
             LaunchedEffect(Unit) {
                 profileViewModel.fetchUserProfile()
             }
@@ -354,7 +352,6 @@ fun NavGraph(
         }
 
         composable("history") {
-            // Tidak perlu onNavigate karena BottomBar dihandle MainActivity
             HistoryScreen()
         }
 
@@ -370,7 +367,6 @@ fun NavGraph(
         // ==================== E-SITTER FLOW ====================
 
         composable("esitter_list") {
-            val esitterViewModel: ESitterViewModel = viewModel()
             ESitterListScreen(
                 viewModel = esitterViewModel,
                 onBack = { navController.popBackStack() },
@@ -382,9 +378,6 @@ fun NavGraph(
         }
 
         composable("esitter_detail") {
-            val parentEntry = remember(it) { navController.getBackStackEntry("esitter_list") }
-            val esitterViewModel:ESitterViewModel = viewModel(parentEntry)
-
             ESitterDetailScreen(
                 viewModel = esitterViewModel,
                 onBack = { navController.popBackStack() },
@@ -394,6 +387,8 @@ fun NavGraph(
                 }
             )
         }
+
+        // ==================== DONASI ====================
 
         composable("donation_list") {
             DonationListScreen(
@@ -420,13 +415,17 @@ fun NavGraph(
             )
         }
 
+        // ==================== KONSULTASI DOKTER ====================
+
         composable("consultation_list") {
-            val consultationViewModel: ConsultationViewModel = viewModel()
             ConsultationListScreen(
-                viewModel = consultationViewModel, // Inject ViewModel yang sama
+                viewModel = consultationViewModel,
                 onBack = { navController.popBackStack() },
                 onDoctorClick = { doctorId ->
                     navController.navigate("consultation_detail/$doctorId")
+                },
+                onChatClick = { routeUrl ->
+                    navController.navigate(routeUrl)
                 }
             )
         }
@@ -435,8 +434,8 @@ fun NavGraph(
             route = "consultation_detail/{doctorId}",
             arguments = listOf(navArgument("doctorId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val consultationViewModel: ConsultationViewModel = viewModel()
             val doctorId = backStackEntry.arguments?.getString("doctorId") ?: ""
+
             ConsultationDetailScreen(
                 doctorId = doctorId,
                 viewModel = consultationViewModel,
@@ -448,10 +447,36 @@ fun NavGraph(
             )
         }
 
-        // --- DAYCARE ROUTES ---
+        composable(
+            route = "chat_room/{doctorId}/{doctorName}?doctorImage={doctorImage}",
+            arguments = listOf(
+                navArgument("doctorId") { type = NavType.StringType },
+                navArgument("doctorName") { type = NavType.StringType },
+                navArgument("doctorImage") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("doctorSpecialization") { type = NavType.StringType; defaultValue = "Dokter" }
+
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("doctorId") ?: ""
+            val name = backStackEntry.arguments?.getString("doctorName") ?: "Dokter"
+            val image = backStackEntry.arguments?.getString("doctorImage") ?: ""
+            val specialization = backStackEntry.arguments?.getString("doctorSpecialization") ?: ""
+            ChatScreenDoctor(
+                doctorId = id,
+                doctorName = name,
+                doctorImage = image,
+                doctorSpecialization = specialization,
+                viewModel = consultationViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ==================== DAYCARE ====================
 
         composable("daycare_list") {
-            val daycareViewModel: DaycareViewModel = viewModel()
             DaycareListScreen(
                 viewModel = daycareViewModel,
                 onBack = { navController.popBackStack() },
@@ -463,8 +488,8 @@ fun NavGraph(
             route = "daycare_detail/{id}",
             arguments = listOf(navArgument("id") { type = NavType.StringType })
         ) { backStackEntry ->
-            val daycareViewModel: DaycareViewModel = viewModel()
             val id = backStackEntry.arguments?.getString("id") ?: ""
+
             DaycareDetailScreen(
                 daycareId = id,
                 viewModel = daycareViewModel,
@@ -475,7 +500,8 @@ fun NavGraph(
                 }
             )
         }
-        // ==================== CHECKOUT & PAYMENT (SHARED VM) ====================
+
+        // ==================== CHECKOUT & PAYMENT ====================
 
         composable(
             route = "checkout?mode={mode}",
@@ -511,14 +537,16 @@ fun NavGraph(
 
         // ==================== LITTLE AI ====================
 
-        composable(
-            route = "little_ai",
-        ) {
-            val ai = remember { RealAiService() }
-            val vm: ChatViewModel = viewModel(factory = ChatViewModelFactory(ai))
-            LaunchedEffect(Unit) { vm.seedWelcome() }
+        composable("little_ai") {
+            // Dependency Injection di sini, aman karena di dalam Composable
+            val aiService = remember { RealAiService() }
+            val chatRepository = remember { ChatRepository(aiService) }
+            val chatViewModelFactory = remember { ChatViewModelFactory(chatRepository) }
+
+            val viewModel: ChatViewModel = viewModel(factory = chatViewModelFactory)
+
             ChatScreen(
-                vm = vm,
+                vm = viewModel,
                 onBack = { navController.popBackStack() }
             )
         }

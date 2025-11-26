@@ -1,5 +1,7 @@
 package com.filkom.designimplementation.model.data.consultation
 
+import com.google.firebase.firestore.PropertyName
+
 data class Doctor(
     val id: String = "",
     val name: String = "",
@@ -10,6 +12,7 @@ data class Doctor(
     val price: Double = 0.0,
     val imageUrl: String = "",
     val location: String = "",
-    val patientCount: Int = 0, // String biar bisa "500+"
-    val isProfessional: Boolean = true // Untuk badge hijau
-)
+    val patientCount: Int = 0,
+
+    @get:PropertyName("isProfessional")
+    val isProfessional: Boolean = true)

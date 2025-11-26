@@ -5,6 +5,9 @@ data class Daycare(
     val name: String = "",
     val description: String = "",
     val location: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val distanceInKm: Float? = null,
     val price: Double = 0.0,
     val priceUnit: String = "Hari", // "Hari", "Bulan", "Tahun"
     val rating: Double = 0.0,

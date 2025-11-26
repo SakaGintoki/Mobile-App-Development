@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -43,6 +46,7 @@ import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
 import com.filkom.designimplementation.viewmodel.data.UserDataViewModel
 import com.filkom.designimplementation.viewmodel.feature.shop.ShopViewModel
+import kotlinx.coroutines.delay
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -62,6 +66,7 @@ fun ShopScreen(
     val user by viewModelUser.userState.collectAsState()
     // Kategori Tabs
     val categories = listOf("Semua", "Suplemen", "Kebutuhan", "Vitamin", "Obat", "Alat")
+    var searchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -70,8 +75,15 @@ fun ShopScreen(
             .statusBarsPadding()
     ) {
         // 1. Top Bar Custom (Search & Icons)
-        ShopTopBar(onCartClick = onNavigateToCart, onBack = onBack)
-
+        ShopTopBar(
+            searchQuery = searchQuery,
+            onSearchChange = { newQuery ->
+                searchQuery = newQuery
+                viewModel.searchProducts(newQuery) // Panggil VM
+            },
+            onCartClick = onNavigateToCart,
+            onBack = onBack
+        )
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(16.dp),
@@ -134,7 +146,12 @@ fun ShopScreen(
 // ================= COMPONENTS =================
 
 @Composable
-fun ShopTopBar(onCartClick: () -> Unit, onBack: () -> Unit) {
+fun ShopTopBar(
+    searchQuery: String, // Terima Value
+    onSearchChange: (String) -> Unit, // Terima Fungsi
+    onCartClick: () -> Unit,
+    onBack: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -145,29 +162,43 @@ fun ShopTopBar(onCartClick: () -> Unit, onBack: () -> Unit) {
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Back",
             tint = Pink,
-            modifier = Modifier.clickable (
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ){ onBack() }
+            modifier = Modifier.clickable { onBack() }
         )
 
         Spacer(Modifier.width(12.dp))
 
-        // Search Bar
+        // Search Bar (TextField)
         Box(
             modifier = Modifier
                 .weight(1f)
-                .height(44.dp)
+                .height(54.dp)
                 .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
                 .background(Color.White, RoundedCornerShape(8.dp))
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.CenterStart
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Search, null, tint = Color.Gray)
-                Spacer(Modifier.width(8.dp))
-                Text("Cari", fontFamily = Poppins, color = Color.Gray, fontSize = 14.sp)
-            }
+            TextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                placeholder = {
+                    Text("Cari produk...", fontFamily = Poppins, color = Color.Gray, fontSize = 14.sp)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, null, tint = Color.Gray)
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = Pink
+                ),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontFamily = Poppins,
+                    fontSize = 14.sp
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+            )
         }
 
         Spacer(Modifier.width(16.dp))
@@ -178,12 +209,7 @@ fun ShopTopBar(onCartClick: () -> Unit, onBack: () -> Unit) {
             Icons.Outlined.ShoppingBag,
             null,
             tint = Pink,
-            modifier = Modifier
-                .size(26.dp)
-                .clickable (
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onCartClick() }
+            modifier = Modifier.size(26.dp).clickable { onCartClick() }
         )
     }
 }
@@ -244,53 +270,106 @@ fun WalletItem(iconBg: Color, iconColor: Color, icon: ImageVector, text: String)
         Text(text, fontFamily = Poppins, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
     }
 }
-
 @Composable
 fun BannerSection() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFE1F5FE))
-    ) {
-        Image(
-            painter = painterResource(R.drawable.header),
-            contentDescription = "Banner",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize().alpha(0.8f)
-        )
+    val banners = listOf(
+        R.drawable.banner_home,
+        R.drawable.banner_home,
+        R.drawable.banner_home
+    )
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(16.dp)
-                .fillMaxWidth(0.6f)
-        ) {
-            Text("Johnson's", fontFamily = Poppins, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
-            Text("Sentuhan Cinta", fontFamily = Poppins, color = Color.White, fontSize = 12.sp)
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = {},
-                colors = ButtonDefaults.buttonColors(containerColor = Pink),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                modifier = Modifier.height(32.dp)
-            ) {
-                Text("Lihat Selengkapnya", fontSize = 10.sp)
-            }
+    // 2. STATE PAGER
+    val pagerState = rememberPagerState(pageCount = { banners.size })
+
+    // 3. LOGIKA AUTO SCROLL (Berjalan setiap 3 detik)
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3000) // Tunggu 3000ms (3 detik)
+            val nextPage = (pagerState.currentPage + 1) % banners.size
+            pagerState.animateScrollToPage(nextPage)
         }
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        horizontalArrangement = Arrangement.Center
+    // 4. UI
+    Column(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(Pink))
-        Spacer(Modifier.width(4.dp))
-        Box(Modifier.size(8.dp).clip(CircleShape).background(Color.LightGray))
-        Spacer(Modifier.width(4.dp))
-        Box(Modifier.size(8.dp).clip(CircleShape).background(Color.LightGray))
+        // --- BAGIAN GAMBAR SLIDER ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp) // Tinggi banner
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.LightGray) // Placeholder warna loading
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                // Tampilkan Gambar sesuai halaman (page)
+                AsyncImage(
+                    model = banners[page],
+                    contentDescription = "Banner Promosi",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = painterResource(R.drawable.ic_launcher_background)
+                )
+
+                // Overlay Text (Opsional - Hapus jika gambar sudah ada teksnya)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.6f))))
+                )
+            }
+
+            // Teks Promo di atas banner (Opsional)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+//                Text(
+//                    text = "Promo Spesial", // Bisa dinamis sesuai data
+//                    fontFamily = Poppins,
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color.White,
+//                    fontSize = 16.sp
+//                )
+                Button(
+                    onClick = { /* Handle klik banner */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = Pink),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Text("Lihat", fontSize = 10.sp, color = Color.White)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // --- BAGIAN INDIKATOR TITIK (DOTS) ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(banners.size) { iteration ->
+                val color = if (pagerState.currentPage == iteration) Pink else Color.LightGray
+                val width = if (pagerState.currentPage == iteration) 24.dp else 8.dp // Efek memanjang saat aktif
+
+                Box(
+                    modifier = Modifier
+                        .padding(2.dp)
+                        .height(8.dp)
+                        .width(width) // Lebar dinamis
+                        .clip(CircleShape)
+                        .background(color)
+                )
+            }
+        }
     }
 }
 

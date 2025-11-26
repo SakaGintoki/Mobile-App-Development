@@ -25,7 +25,6 @@ class CartRepository {
             return@callbackFlow
         }
 
-        // Listener Firestore (Realtime Updates)
         val listener = collection.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 close(error)

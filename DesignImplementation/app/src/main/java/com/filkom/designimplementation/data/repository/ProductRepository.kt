@@ -12,7 +12,6 @@ class ProductRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val productsCollection = firestore.collection("products")
 
-    // Ambil semua produk
     suspend fun getAllProducts(): List<Product> {
         return try {
             val snapshot = productsCollection.get().await()

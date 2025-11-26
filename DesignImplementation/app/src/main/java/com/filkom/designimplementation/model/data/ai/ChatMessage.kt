@@ -1,7 +1,13 @@
 package com.filkom.designimplementation.model.data.ai
 
+import com.google.firebase.firestore.PropertyName
+
 data class ChatMessage(
-    val id: Long,
-    val fromUser: Boolean,
-    val text: String
+    val id: String = "",
+    val text: String = "",
+
+    @get:PropertyName("fromUser")
+    val fromUser: Boolean = false,
+
+    val timestamp: Long = System.currentTimeMillis()
 )

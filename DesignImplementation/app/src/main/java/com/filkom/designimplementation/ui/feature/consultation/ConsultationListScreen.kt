@@ -1,13 +1,19 @@
 package com.filkom.designimplementation.ui.feature.consultation
 
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -50,14 +57,15 @@ fun ConsultationListScreen(
     viewModel: ConsultationViewModel,
     viewModelUser: UserDataViewModel = viewModel(),
     onBack: () -> Unit,
-    onDoctorClick: (String) -> Unit
+    onDoctorClick: (String) -> Unit,
+    onChatClick: (String) -> Unit
 ) {
-    // Ambil data dokter dari ViewModel
     val doctors by viewModel.doctors.collectAsState()
     val user by viewModelUser.userState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
-    // Trigger fetch data saat halaman dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchDoctors()
     }
@@ -76,7 +84,13 @@ fun ConsultationListScreen(
                 .padding(horizontal = 24.dp)
         ) {
             // 1. Search Bar
-            SearchBar()
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { newQuery ->
+                    searchQuery = newQuery
+                    viewModel.searchDoctors(newQuery) // Panggil VM
+                }
+            )
 
             Spacer(Modifier.height(24.dp))
 
@@ -107,7 +121,10 @@ fun ConsultationListScreen(
                     fontSize = 12.sp,
                     color = Color(0xFF9C27B0), // Warna Ungu
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable (
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { }
                 )
             }
 
@@ -128,9 +145,27 @@ fun ConsultationListScreen(
                         fontFamily = Poppins
                     )
                 } else {
-                    // Tampilkan List
                     doctors.forEach { doctor ->
-                        DoctorListItem(doctor = doctor, onClick = { onDoctorClick(doctor.id) })
+                        DoctorListItem(
+                            doctor = doctor,
+                            onClick = { onDoctorClick(doctor.id) },
+                            onChatClick = {
+                                val currentUserId = user?.id ?: ""
+
+                                viewModel.checkActiveSession(doctor.id, currentUserId) { isActive ->
+                                    if (isActive) {
+                                        val encodedName = Uri.encode(doctor.name)
+                                        val encodedImage = Uri.encode(doctor.imageUrl)
+                                        val encodedSpecialization = Uri.encode(doctor.specialization)
+
+                                        val route = "chat_room/${doctor.id}/$encodedName?doctorImage=$encodedImage&doctorSpecialization=$encodedSpecialization"
+                                        onChatClick(route)
+                                    } else {
+                                        Toast.makeText(context, "Sesi konsultasi belum dimulai atau sudah berakhir.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
                         Spacer(Modifier.height(16.dp))
                     }
                 }
@@ -138,7 +173,7 @@ fun ConsultationListScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // 4. Section Kategori Bawah
+            /*
             Text(
                 text = "Cari Dokter yang sesuai",
                 fontFamily = Poppins,
@@ -155,7 +190,6 @@ fun ConsultationListScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Row Kategori Bulat
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -165,6 +199,7 @@ fun ConsultationListScreen(
                 CategoryCircle(Icons.Default.PregnantWoman, "Kandungan")
                 CategoryCircle(Icons.Default.GridView, "Lainnya")
             }
+            */
 
             Spacer(Modifier.height(40.dp))
         }
@@ -182,7 +217,6 @@ fun ConsultationTopBar(
     CenterAlignedTopAppBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
         title = {
-
             Text(
                 buildAnnotatedString {
                     withStyle(style = SpanStyle(color = Color(0xFF673AB7), fontWeight = FontWeight.Bold)) { // Ungu Tua
@@ -198,11 +232,9 @@ fun ConsultationTopBar(
             )
         },
         navigationIcon = {
-
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Pink)
             }
-
         },
         actions = {
             IconButton(onClick = {}, modifier = Modifier.padding(end = 12.dp)) {
@@ -213,32 +245,60 @@ fun ConsultationTopBar(
 }
 
 @Composable
-fun SearchBar() {
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit
+) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray),
+        shadowElevation = 2.dp, // Kasih bayangan dikit biar pop-up
         color = Color.White,
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
-            Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
-            Spacer(Modifier.width(8.dp))
-            Text("Cari", color = Color.Gray, fontFamily = Poppins)
-        }
+        // Gunakan TextField, bukan Row biasa
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = {
+                Text("Cari dokter atau spesialis...", color = Color.LightGray, fontSize = 14.sp, fontFamily = Poppins)
+            },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+            },
+            // Styling agar terlihat clean (tanpa garis bawah)
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = Pink
+            ),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontFamily = Poppins,
+                fontSize = 14.sp,
+                color = TextPrimary
+            ),
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
 @Composable
-fun DoctorListItem(doctor: Doctor, onClick: () -> Unit) {
+fun DoctorListItem(
+    doctor: Doctor,
+    onClick: () -> Unit,
+    onChatClick: () -> Unit // Parameter Callback Chat
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -248,7 +308,6 @@ fun DoctorListItem(doctor: Doctor, onClick: () -> Unit) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Foto Dokter (Kotak Rounded Abu-abu di gambar)
             AsyncImage(
                 model = doctor.imageUrl,
                 contentDescription = null,
@@ -286,7 +345,7 @@ fun DoctorListItem(doctor: Doctor, onClick: () -> Unit) {
                     SmallChip(Icons.Default.Work, doctor.experience) // 7 Tahun
                     Spacer(Modifier.width(8.dp))
                     // Konversi rating 0-5 ke persen (misal 4.8 -> 96%)
-                    val percentage = (doctor.rating / 5.0 * 100).toInt()
+                    val percentage = if(doctor.rating > 0) (doctor.rating / 5.0 * 100).toInt() else 0
                     SmallChip(Icons.Default.ThumbUp, "$percentage%") // 95%
                 }
 
@@ -308,7 +367,7 @@ fun DoctorListItem(doctor: Doctor, onClick: () -> Unit) {
 
                     // Tombol Chat Kecil
                     Button(
-                        onClick = onClick, // Klik tombol = klik card
+                        onClick = onChatClick, // Panggil Callback
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE086D3)), // Pink agak ungu
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),

@@ -3,6 +3,7 @@ package com.filkom.designimplementation.ui.feature.profile
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.filkom.designimplementation.R
 import com.filkom.designimplementation.model.data.auth.User
 import com.filkom.designimplementation.ui.theme.*
@@ -128,13 +130,24 @@ fun ProfileContent(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // ===== 1. HEADER INFO (Foto, Nama Besar, Email) =====
-        Image(
-            painter = painterResource(R.drawable.ic_launcher_background),
-            contentDescription = "Foto Profil",
-            contentScale = ContentScale.Crop,
+//        Image(
+//            painter = painterResource(R.drawable.ic_launcher_background),
+//            contentDescription = "Foto Profil",
+//            contentScale = ContentScale.Crop,
+//            modifier = Modifier
+//                .size(100.dp)
+//                .clip(CircleShape)
+//        )
+        AsyncImage(
+            model = user.imageUrl,
+            contentDescription = null,
             modifier = Modifier
                 .size(100.dp)
                 .clip(CircleShape)
+            ,
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(R.drawable.ic_launcher_background),
+            error = painterResource(R.drawable.ic_launcher_background)
         )
         Spacer(Modifier.height(16.dp))
 

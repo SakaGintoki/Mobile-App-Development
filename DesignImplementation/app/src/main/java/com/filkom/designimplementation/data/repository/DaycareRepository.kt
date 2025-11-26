@@ -28,7 +28,6 @@ class DaycareRepository {
         }
     }
 
-    // Update jumlah booking saat checkout berhasil
     suspend fun incrementBookingCount(id: String) {
         try {
             firestore.collection("daycares").document(id)
@@ -45,17 +44,11 @@ class DaycareRepository {
         try {
             firestore.runTransaction { transaction ->
                 val snapshot = transaction.get(docRef)
-
-                // 1. Ambil data lama
-                // Pastikan di Firestore field ini tipe Number/Double, bukan String
                 val currentRating = snapshot.getDouble("rating") ?: 0.0
                 val currentReviewCount = snapshot.getLong("reviewCount") ?: 0
-
-                // 2. Hitung Rata-rata Baru
                 val newReviewCount = currentReviewCount + 1
                 val newAverageRating = ((currentRating * currentReviewCount) + newRating) / newReviewCount
 
-                // 3. Update ke Firestore
                 transaction.update(docRef, "rating", newAverageRating)
                 transaction.update(docRef, "reviewCount", newReviewCount)
             }.await()

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,6 +42,7 @@ import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
 import com.filkom.designimplementation.viewmodel.data.UserDataViewModel
 import com.filkom.designimplementation.viewmodel.feature.esitter.ESitterViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun ESitterListScreen(
@@ -81,7 +84,12 @@ fun ESitterListScreen(
                 SitterFilterTabs(
                     filters = filters,
                     selected = selectedFilter,
-                    onSelect = { selectedFilter = it }
+                    onSelect = { filterName ->
+                        // 1. Update warna tombol
+                        selectedFilter = filterName
+
+                        // 2. PANGGIL FUNGSI FILTER DI VIEWMODEL
+                        viewModel.applyFilter(filterName)                    }
                 )
             }
 
@@ -145,7 +153,6 @@ fun ESitterListScreen(
 
 // ================= COMPONENTS =================
 
-// --- 1. Top Bar Khusus (Sesuai Request Gambar) ---
 @Composable
 fun ESitterTopBar(
     onBack: () -> Unit,
@@ -200,36 +207,82 @@ fun ESitterTopBar(
 // --- 2. Banner Section Khusus (Sesuai Request Gambar) ---
 @Composable
 fun ESitterBannerSection() {
+
+    val banners = listOf(
+        R.drawable.banner_home,
+        R.drawable.banner_home,
+        R.drawable.banner_home
+    )
+
+    val pagerState = rememberPagerState(pageCount = { banners.size })
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3000)
+            val nextPage = (pagerState.currentPage + 1) % banners.size
+            pagerState.animateScrollToPage(nextPage)
+        }
+    }
+
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Banner Image Card
         Card(
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier.fillMaxWidth().height(150.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
         ) {
-            // Gunakan gambar placeholder header Anda
-            Image(
-                painter = painterResource(R.drawable.header),
-                contentDescription = "Banner promo",
-                contentScale = ContentScale.Crop,
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier.fillMaxSize()
-            )
+            ) { page ->
+//                Image(
+//                    painter = painterResource(banners[page]),
+//                    contentDescription = "Banner $page",
+//                    contentScale = ContentScale.Crop,
+//                    modifier = Modifier.fillMaxSize()
+//                )
+                AsyncImage(
+                    model = banners[page],
+                    contentDescription = "Banner Promosi",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = painterResource(R.drawable.ic_launcher_background)
+                )
+            }
         }
+
         Spacer(Modifier.height(12.dp))
-        // Dots Indicator
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(Pink))
-            Box(Modifier.size(8.dp).clip(CircleShape).background(Color.LightGray))
-            Box(Modifier.size(8.dp).clip(CircleShape).background(Color.LightGray))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(banners.size) { iteration ->
+                val isSelected = pagerState.currentPage == iteration
+
+                val color = if (isSelected) Pink else Color.LightGray
+
+                val width = if (isSelected) 20.dp else 8.dp
+
+                Box(
+                    modifier = Modifier
+                        .height(8.dp)
+                        .width(width)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
     }
 }
 
-// --- 3. Menu Buttons (Pesanan & Cek Kupon) ---
 @Composable
 fun MenuButtonsSection() {
     Row(
@@ -268,8 +321,6 @@ fun MenuButtonsSection() {
     }
 }
 
-
-// --- 4. Filter Tabs (Gaya Konsisten dengan Shop) ---
 @Composable
 fun SitterFilterTabs(filters: List<String>, selected: String, onSelect: (String) -> Unit) {
     LazyRow(

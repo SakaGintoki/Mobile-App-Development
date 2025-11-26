@@ -19,6 +19,7 @@ foundationVersion = "1.9.5"
 foundationLayoutVersion = "1.9.5"
 ui = "1.9.5"
 uiTextVersion = "1.9.5"
+playServicesLocation = "21.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +47,7 @@ foundation = { group = "androidx.compose.foundation", name = "foundation", versi
 foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayoutVersion" }
 ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiTextVersion" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

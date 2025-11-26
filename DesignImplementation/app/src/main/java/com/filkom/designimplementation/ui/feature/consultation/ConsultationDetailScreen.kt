@@ -28,14 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.filkom.designimplementation.R
+import com.filkom.designimplementation.model.common.AppBookingDate
 import com.filkom.designimplementation.model.data.consultation.Doctor
 import com.filkom.designimplementation.ui.components.formatRupiah
+import com.filkom.designimplementation.ui.feature.esitter.PriceRow
 import com.filkom.designimplementation.ui.theme.Pink
 import com.filkom.designimplementation.ui.theme.Poppins
 import com.filkom.designimplementation.ui.theme.TextPrimary
+import com.filkom.designimplementation.utils.DateHelper
 import com.filkom.designimplementation.viewmodel.feature.consultation.ConsultationViewModel
-
-data class BookingDate(val day: String, val date: String, val fullDate: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,24 +46,43 @@ fun ConsultationDetailScreen(
     onBack: () -> Unit,
     onBookNow: (Doctor, String, String) -> Unit
 ) {
+    // 1. Load Detail Dokter
     LaunchedEffect(doctorId) {
         viewModel.getDoctorDetail(doctorId)
     }
     val doctor = viewModel.selectedDoctor.collectAsState().value ?: return
     val scrollState = rememberScrollState()
 
-    // State Selection
-    var selectedTime by remember { mutableStateOf("09.00") }
-    val times = listOf("09.00", "10.00", "11.00", "12.00", "13.00", "14.00")
-
+    // 2. State & Data Tanggal
+    var selectedTime by remember { mutableStateOf<String?>(null) }
     var selectedDateIndex by remember { mutableIntStateOf(0) }
-    val dates = listOf(
-        BookingDate("Min", "12", "Minggu, 12 Mei"),
-        BookingDate("Sen", "13", "Senin, 13 Mei"),
-        BookingDate("Sel", "14", "Selasa, 14 Mei"),
-        BookingDate("Rab", "15", "Rabu, 15 Mei"),
-        BookingDate("Kam", "16", "Kamis, 16 Mei")
-    )
+
+    // Ambil Tanggal Dinamis
+    val dates = remember { DateHelper.getNext7Days() }
+
+    // Ambil Data Slot yang sudah dibooking dari ViewModel
+    val bookedSlots by viewModel.bookedSlots.collectAsState()
+
+    // 3. FETCH SLOT DARI DATABASE SETIAP TANGGAL BERUBAH (PENTING!)
+    LaunchedEffect(selectedDateIndex) {
+        val dateFull = dates[selectedDateIndex].fullDate // "Senin, 12 Mei 2025"
+        viewModel.fetchBookedSlots(doctorId, dateFull)
+        selectedTime = null // Reset jam saat ganti tanggal
+    }
+
+    // 4. LOGIC GENERATE JAM + FILTER DATABASE (PENTING!)
+    val timeSlots = remember(selectedDateIndex, bookedSlots) {
+        val isToday = (selectedDateIndex == 0)
+        // Ambil jam dasar (09.00 - 20.00) yang belum lewat waktu
+        val rawSlots = DateHelper.generateTimeSlots(isToday)
+
+        // Filter: Cek apakah jam tersebut ada di list 'bookedSlots' dari Firestore?
+        rawSlots.map { slot ->
+            val isBooked = bookedSlots.contains(slot.time)
+            // Slot tersedia JIKA: Belum lewat (slot.isAvailable) DAN Belum dibooking (!isBooked)
+            slot.copy(isAvailable = slot.isAvailable && !isBooked)
+        }
+    }
 
     val adminFee = 5000.0
     val totalPrice = doctor.price + adminFee
@@ -74,7 +94,12 @@ fun ConsultationDetailScreen(
                 servicePrice = doctor.price,
                 adminFee = adminFee,
                 totalPrice = totalPrice,
-                onBookNow = { onBookNow(doctor, dates[selectedDateIndex].fullDate, selectedTime) }
+                isButtonEnabled = selectedTime != null,
+                onBookNow = {
+                    selectedTime?.let { time ->
+                        onBookNow(doctor, dates[selectedDateIndex].fullDate, time)
+                    }
+                }
             )
         }
     ) { innerPadding ->
@@ -83,14 +108,13 @@ fun ConsultationDetailScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
                 .verticalScroll(scrollState)
         ) {
+            // Header & Info Dokter (Sama)
             DoctorHeaderSection(doctor = doctor, onBack = onBack)
-
             Spacer(Modifier.height(20.dp))
-
             DoctorInfoSection(doctor = doctor)
-
             Spacer(Modifier.height(20.dp))
 
+            // List Tanggal
             SectionTitle("Pilih Tanggal")
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
@@ -107,27 +131,28 @@ fun ConsultationDetailScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // 4. Pilih Jam
+            // List Jam (Gunakan timeSlots hasil filter di atas)
             SectionTitle("Pilih Jam")
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(times) { time ->
+                items(timeSlots) { slot ->
                     TimeSelectorItem(
-                        time = time,
-                        isSelected = selectedTime == time,
-                        onClick = { selectedTime = time }
+                        time = slot.time,
+                        isEnabled = slot.isAvailable, // Ini yang bikin abu-abu
+                        isSelected = selectedTime == slot.time,
+                        onClick = {
+                            if (slot.isAvailable) selectedTime = slot.time
+                        }
                     )
                 }
             }
 
-            // Spacer bawah
             Spacer(Modifier.height(40.dp))
         }
     }
 }
-
 // --- SUB-COMPONENTS ---
 
 @Composable
@@ -321,7 +346,7 @@ fun StatItem(label: String, value: String) {
 }
 
 @Composable
-fun DateSelectorItem(dateObj: BookingDate, isSelected: Boolean, onClick: () -> Unit) {
+fun DateSelectorItem(dateObj: AppBookingDate, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .width(70.dp)
@@ -356,24 +381,49 @@ fun DateSelectorItem(dateObj: BookingDate, isSelected: Boolean, onClick: () -> U
 }
 
 @Composable
-fun TimeSelectorItem(time: String, isSelected: Boolean, onClick: () -> Unit) {
+fun TimeSelectorItem(
+    time: String,
+    isEnabled: Boolean, // Parameter Baru
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    // Tentukan warna berdasarkan status
+    val backgroundColor = when {
+        isSelected -> Pink // Jika dipilih: Pink
+        !isEnabled -> Color(0xFFF0F0F0) // Jika lewat/disabled: Abu muda banget
+        else -> Color.White // Default: Putih
+    }
+
+    val textColor = when {
+        isSelected -> Color.White
+        !isEnabled -> Color.LightGray // Teks abu pudar
+        else -> Color.Gray // Teks abu biasa
+    }
+
+    val borderColor = when {
+        isSelected -> Pink
+        !isEnabled -> Color.Transparent
+        else -> Color(0xFFE0E0E0)
+    }
+
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) Pink else Color.White)
-            .border(1.dp, if (isSelected) Pink else Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(50))
+            .background(backgroundColor)
+            .border(1.dp, borderColor, RoundedCornerShape(50))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onClick() }
-            .padding(horizontal = 24.dp, vertical = 12.dp)
+                indication = null,
+                enabled = isEnabled
+            ) { onClick() } // Disable klik jika lewat
+            .padding(horizontal = 24.dp, vertical = 10.dp)
     ) {
         Text(
             text = time,
             fontFamily = Poppins,
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp,
-            color = if (isSelected) Color.White else Pink
+            color = textColor
         )
     }
 }
@@ -383,6 +433,7 @@ fun DoctorBookingBottomBar(
     servicePrice: Double,
     adminFee: Double,
     totalPrice: Double,
+    isButtonEnabled: Boolean, // Tambahan parameter biar tombol bisa disable kalau belum pilih jam
     onBookNow: () -> Unit
 ) {
     Surface(
@@ -390,71 +441,45 @@ fun DoctorBookingBottomBar(
         shadowElevation = 20.dp,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .padding(24.dp)
-                .navigationBarsPadding()
-        ) {
-            Text(
-                text = "Rincian Biaya",
-                fontFamily = Poppins,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                color = TextPrimary
-            )
-            Text(
-                text = "Berikut adalah biaya untuk pemesanan jasa layanan dokter",
-                fontFamily = Poppins,
-                fontSize = 10.sp,
-                color = Color.Gray
-            )
+        Column(modifier = Modifier.padding(24.dp).navigationBarsPadding()) {
+            Text("Biaya Jasa", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+            Text("Berikut adalah rincian biaya pemesanan", fontFamily = Poppins, fontSize = 12.sp, color = Color.Gray)
 
-            HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
+            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
 
             PriceRow("Biaya Jasa", servicePrice)
             Spacer(Modifier.height(8.dp))
             PriceRow("Biaya Admin", adminFee)
 
-            HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
+            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
 
-            // Footer Total & Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Total", fontSize = 12.sp, fontFamily = Poppins, color = Color.Gray)
-                    Text(
-                        text = formatRupiah(totalPrice),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = Poppins,
-                        color = TextPrimary
-                    )
+                    Text("Total Pembayaran", fontSize = 12.sp, fontFamily = Poppins, color = Color.Gray)
+                    Text(formatRupiah(totalPrice), fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = Poppins, color = Pink)
                 }
 
                 Button(
                     onClick = onBookNow,
-                    colors = ButtonDefaults.buttonColors(containerColor = Pink),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .height(48.dp)
-                        .width(140.dp)
+                    enabled = isButtonEnabled, // Tombol mati kalau jam belum dipilih
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Pink,
+                        disabledContainerColor = Color.LightGray
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(50.dp).width(160.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(
-                        text = "Buat Janji",
-                        fontFamily = Poppins,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color.White
-                    )
+                    Text("Buat Janji", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 }
             }
         }
     }
 }
-
 @Composable
 fun PriceRow(label: String, amount: Double) {
     Row(

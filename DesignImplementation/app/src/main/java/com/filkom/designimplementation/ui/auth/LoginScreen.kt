@@ -45,8 +45,6 @@ fun LoginScreen(
     val state by viewModel.loginState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-
-        // ================= HEADER (gambar gradasi) =================
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -60,7 +58,6 @@ fun LoginScreen(
             )
         }
 
-        // ================= TEKS DI BAWAH HEADER =================
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
@@ -84,14 +81,12 @@ fun LoginScreen(
             )
         }
 
-        // ================= FORM =================
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
         ) {
-            // Email
             Text("Email",
                 fontFamily = Poppins,
                 fontSize = 12.sp,
@@ -110,7 +105,6 @@ fun LoginScreen(
 
             Spacer(Modifier.height(14.dp))
 
-            // Password
             Text("Password", fontFamily = Poppins, fontSize = 12.sp, color = Color(0xFF6A6A6B))
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(
@@ -133,7 +127,6 @@ fun LoginScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // Tombol Login
             Button(
                 onClick = { onLogin(email, password) },
                 modifier = Modifier
@@ -181,7 +174,6 @@ fun LoginScreen(
             }
             Spacer(Modifier.height(22.dp))
 
-            // Divider + teks tengah
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
                 Text(

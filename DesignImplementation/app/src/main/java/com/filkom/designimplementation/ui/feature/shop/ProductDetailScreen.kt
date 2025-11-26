@@ -113,32 +113,34 @@ fun ProductDetailScreen(
                 ) { page ->
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         AsyncImage(
-                            model = product.imageUrls[page],
+                            model = product.imageUrls[page], // Mengambil dari list index ke-page
                             contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(250.dp),
+                            contentScale = ContentScale.Crop, // Saran: Gunakan Crop agar full, atau Fit agar utuh
+                            modifier = Modifier.fillMaxSize(), // Ubah size jadi fillMaxSize agar memenuhi Box
                             placeholder = painterResource(R.drawable.ic_launcher_background),
                             error = painterResource(R.drawable.ic_launcher_background)
                         )
                     }
                 }
 
-                // Dots Indicator (Sinkron dengan Pager)
-                Row(
-                    modifier = Modifier
-                        .padding(bottom = 16.dp)
-                        .wrapContentWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    repeat(pagerState.pageCount) { iteration ->
-                        val color = if (pagerState.currentPage == iteration) Pink else Color.LightGray
-                        Box(
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .size(8.dp)
-                        )
+                // Dots Indicator (Hanya muncul jika gambar > 1)
+                if (product.imageUrls.size > 1) {
+                    Row(
+                        modifier = Modifier
+                            .padding(bottom = 16.dp)
+                            .wrapContentWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        repeat(pagerState.pageCount) { iteration ->
+                            val color = if (pagerState.currentPage == iteration) Pink else Color.LightGray
+                            Box(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .size(8.dp)
+                            )
+                        }
                     }
                 }
             }

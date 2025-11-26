@@ -31,8 +31,8 @@ import com.filkom.designimplementation.viewmodel.auth.SignUpState
 fun SignUpScreen(
     viewModelGoogle: LoginViewModel = viewModel(),
     viewModel: SignUpViewModel = viewModel(),
-    onSuccess: (String, String?, String?) -> Unit, // Diganti dari onSignUp agar lebih jelas
-    onFailed: (String) -> Unit, // Callback baru untuk error
+    onSuccess: (String, String?, String?) -> Unit,
+    onFailed: (String) -> Unit,
     onToLogin: () -> Unit = {},
 
     onGoogle: () -> Unit = {},
@@ -44,13 +44,9 @@ fun SignUpScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Observasi State
     val state by viewModel.signUpState.collectAsState()
     val googleState by viewModelGoogle.loginState.collectAsState()
 
-    // ==================================================================
-    // 1. LOGIKA NAVIGASI DILETAKKAN DI SINI (TOP LEVEL)
-    // ==================================================================
     LaunchedEffect(state) {
         when (state) {
             is SignUpState.Success -> {
@@ -65,7 +61,6 @@ fun SignUpScreen(
         }
     }
 
-    // 2. Listener untuk Google Sign Up
     LaunchedEffect(googleState) {
         when (googleState) {
             is LoginState.Success -> {
@@ -80,12 +75,7 @@ fun SignUpScreen(
         }
     }
 
-    // ==================================================================
-    // UI LAYOUT
-    // ==================================================================
     Column(modifier = Modifier.fillMaxSize()) {
-
-        // ========= HEADER =========
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -99,7 +89,6 @@ fun SignUpScreen(
             )
         }
 
-        // ========= TEKS INTRO =========
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
@@ -123,7 +112,6 @@ fun SignUpScreen(
             )
         }
 
-        // ========= FORM INPUT =========
         Spacer(Modifier.height(16.dp))
         Column(
             modifier = Modifier
@@ -166,10 +154,8 @@ fun SignUpScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // Tombol Sign Up
             Button(
                 onClick = {
-                    // Panggil ViewModel
                     viewModel.signUpUser(name, email, password)
                 },
                 modifier = Modifier
@@ -178,7 +164,6 @@ fun SignUpScreen(
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF987C5))
             ) {
-                // Ubah teks tombol jadi loading jika sedang proses (Optional UX)
                 if (state is SignUpState.Loading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
@@ -186,7 +171,6 @@ fun SignUpScreen(
                 }
             }
 
-            // Tampilkan Error Message jika Gagal
             if (state is SignUpState.Failed) {
                 Text(
                     text = (state as SignUpState.Failed).message,
@@ -212,7 +196,6 @@ fun SignUpScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            // Social Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -226,7 +209,6 @@ fun SignUpScreen(
                 }
             }
 
-            // Handle Loading/Error Google
             if (googleState is LoginState.Loading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), color = Color(0xFFF987C5))
             }
@@ -241,7 +223,6 @@ fun SignUpScreen(
 
             Spacer(Modifier.height(22.dp))
 
-            // Tombol ke Login
             TextButton(
                 onClick = onToLogin,
                 modifier = Modifier.align(Alignment.CenterHorizontally)

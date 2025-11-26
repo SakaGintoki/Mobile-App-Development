@@ -7,6 +7,7 @@ data class User(
     val usernumber: Long = 0,
     val username: String = "",
     val phone: String = "",
+    val imageUrl: String = "",
     val role: String = "user",
     val balance: Double = 0.0,
     val points: Int = 0

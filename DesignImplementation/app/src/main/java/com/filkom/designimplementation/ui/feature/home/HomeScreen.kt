@@ -1,5 +1,9 @@
 package com.filkom.designimplementation.ui.feature.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
@@ -34,6 +38,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.filkom.designimplementation.R
@@ -61,12 +67,30 @@ fun HomeScreen(
     onProductClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    // State untuk scroll vertikal halaman utama
     val mainScrollState = rememberScrollState()
-
-    // State KHUSUS untuk scroll horizontal kategori (agar indikator bisa bergerak)
     val categoryScrollState = rememberScrollState()
+    val context = LocalContext.current
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
+    LaunchedEffect(Unit) {
+        val hasFineLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasFineLocation && !hasCoarseLocation) {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F8F8))) {
 
@@ -140,6 +164,7 @@ fun HomeScreen(
 
                         MainInfoCard(
                             name = user.name ?: "Pengguna",
+                            userImage = user.imageUrl,
                             userId = user.usernumber.toString(),
                             points = user.points,
                             balance = formatRupiah(user.balance)
@@ -310,7 +335,7 @@ fun ScrollIndicator(
 }
 
 @Composable
-fun MainInfoCard(name: String, userId: String, points: Int, balance: String) {
+fun MainInfoCard(name: String, userImage: String,userId: String, points: Int, balance: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -328,16 +353,27 @@ fun MainInfoCard(name: String, userId: String, points: Int, balance: String) {
         Column(modifier = Modifier.padding(20.dp)) {
             // Header Profile
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(R.drawable.ic_launcher_background),
-                    contentDescription = "Profile",
-                    contentScale = ContentScale.Crop,
+//                Image(
+//                    painter = painterResource(R.drawable.ic_launcher_background),
+//                    contentDescription = "Profile",
+//                    contentScale = ContentScale.Crop,
+//                    modifier = Modifier
+//                        .size(50.dp)
+//                        .clip(CircleShape)
+//                        .border(1.dp, Color.White, CircleShape)
+//                )
+                AsyncImage(
+                    model = userImage,
+                    contentDescription = null,
                     modifier = Modifier
                         .size(50.dp)
                         .clip(CircleShape)
                         .border(1.dp, Color.White, CircleShape)
+                    ,
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.ic_launcher_background),
+                    error = painterResource(R.drawable.ic_launcher_background)
                 )
-
                 Spacer(Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {

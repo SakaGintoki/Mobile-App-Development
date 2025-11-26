@@ -53,6 +53,7 @@ android {
 
 dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.0.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
     implementation("com.google.firebase:firebase-analytics")
@@ -69,6 +70,7 @@ dependencies {
     implementation(libs.foundation.layout)
     implementation(libs.ui)
     implementation(libs.ui.text)
+    implementation(libs.play.services.location)
 
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)

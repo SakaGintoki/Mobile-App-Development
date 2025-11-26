@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -45,11 +46,14 @@ fun DonationListScreen(
     viewModel: DonationListViewModel = viewModel(),
     viewModelUser: UserDataViewModel = viewModel(),
     onBack: () -> Unit,
-    onDonationClick: (String) -> Unit // Mengirim ID ke Detail Screen
+    onDonationClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user by viewModelUser.userState.collectAsState()
 
+    // State Filter Aktif
+    var selectedCategory by remember { mutableStateOf("Semua") }
+    var searchQuery by remember { mutableStateOf("") } // State untuk teks search
     Scaffold(
         containerColor = Color.White,
         topBar = {
@@ -62,15 +66,31 @@ fun DonationListScreen(
                 .fillMaxSize(),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
+            // 2. UPDATE SEARCH BAR SECTION
             item {
-                SearchBarSection()
+                SearchBarSection(
+                    query = searchQuery,
+                    onQueryChange = { newQuery ->
+                        searchQuery = newQuery
+                        viewModel.searchDonations(newQuery) // Panggil VM
+                    }
+                )
             }
+
+            item { DonationBalanceCard(user?.balance ?: 0.0) }
+
+            // --- BAGIAN KATEGORI FILTER ---
             item {
-                DonationBalanceCard(user?.balance ?: 0.0)
+                DonationCategories(
+                    selectedCategory = selectedCategory,
+                    onCategoryClick = { category ->
+                        selectedCategory = category
+                        searchQuery = "" // Reset search bar saat ganti kategori
+                        viewModel.applyFilter(category)
+                    }
+                )
             }
-            item {
-                DonationCategories()
-            }
+
             item {
                 Row(
                     modifier = Modifier
@@ -79,23 +99,28 @@ fun DonationListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Rekomendasi",
-                        fontFamily = Poppins,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        "Lihat semua>",
-                        fontFamily = Poppins,
-                        fontSize = 12.sp,
-                        color = Color(0xFF9C27B0), // Warna Ungu sesuai gambar
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Rekomendasi", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+
+                    // Tombol reset filter (Opsional)
+                    if (selectedCategory != "Semua") {
+                        Text(
+                            "Lihat Semua",
+                            fontFamily = Poppins,
+                            fontSize = 12.sp,
+                            color = Color(0xFF9C27B0),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable (
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                selectedCategory = "Semua"
+                                viewModel.applyFilter("Semua")
+                            }
+                        )
+                    }
                 }
             }
 
-            // 5. List Donasi (State Handling)
             when (uiState) {
                 is DonationListUiState.Loading -> {
                     item {
@@ -112,7 +137,7 @@ fun DonationListScreen(
                     if (donations.isEmpty()) {
                         item {
                             Text(
-                                text = "Belum ada rekomendasi saat ini.",
+                                text = if(searchQuery.isNotEmpty()) "Tidak ditemukan hasil untuk '$searchQuery'" else "Belum ada donasi di kategori ini.",
                                 modifier = Modifier.padding(horizontal = 24.dp),
                                 color = Color.Gray,
                                 fontSize = 12.sp,
@@ -171,19 +196,23 @@ fun DonationTopBar(
 }
 
 @Composable
-fun SearchBarSection() {
+fun SearchBarSection(
+    query: String, // Terima value
+    onQueryChange: (String) -> Unit // Terima fungsi ubah
+) {
     Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            placeholder = { Text("Cari", fontFamily = Poppins, color = Color.Gray) },
+            value = query, // Bind state
+            onValueChange = onQueryChange, // Panggil fungsi
+            placeholder = { Text("Cari donasi...", fontFamily = Poppins, color = Color.Gray) },
             leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color.LightGray,
                 focusedBorderColor = Pink
-            )
+            ),
+            singleLine = true
         )
     }
 }
@@ -247,34 +276,83 @@ fun DonationBalanceCard(
 }
 
 @Composable
-fun DonationCategories() {
+fun DonationCategories(
+    selectedCategory: String,
+    onCategoryClick: (String) -> Unit
+) {
+    // Daftar kategori dan icon-nya
+    val categories = listOf(
+        "Pendidikan" to R.drawable.ic_education,
+        "Kesehatan" to R.drawable.ic_health,
+        "Kemanusiaan" to R.drawable.ic_humanity,
+        "Lingkungan" to R.drawable.ic_environment
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        CategoryCircleItem("Pendidikan", R.drawable.ic_launcher_background) // Ganti resource gambar
-        CategoryCircleItem("Kesehatan", R.drawable.ic_launcher_background)
-        CategoryCircleItem("Kemanusiaan", R.drawable.ic_launcher_background)
-        CategoryCircleItem("Lingkungan", R.drawable.ic_launcher_background)
+        categories.forEach { (name, iconRes) ->
+            CategoryCircleItem(
+                title = name,
+                imageRes = iconRes,
+                isSelected = selectedCategory == name, // Cek apakah ini yang dipilih
+                onClick = { onCategoryClick(name) }
+            )
+        }
     }
 }
-
 @Composable
-fun CategoryCircleItem(title: String, imageRes: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(
-            painter = painterResource(imageRes),
-            contentDescription = title,
-            contentScale = ContentScale.Crop,
+fun CategoryCircleItem(
+    title: String,
+    imageRes: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable (
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+        ){ onClick() }
+    ) {
+        // Lingkaran
+        Box(
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .border(1.dp, Color.LightGray, CircleShape)
-        )
+                .border(
+                    // Jika dipilih: Border Tebal Pink. Jika tidak: Tipis Abu.
+                    width = if (isSelected) 3.dp else 1.dp,
+                    color = if (isSelected) Pink else Color.LightGray,
+                    shape = CircleShape
+                )
+                .background(if (isSelected) Pink.copy(alpha = 0.1f) else Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(imageRes),
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .padding(1.dp)
+                    .clip(CircleShape)
+
+            )
+        }
+
         Spacer(Modifier.height(8.dp))
-        Text(title, fontSize = 10.sp, fontFamily = Poppins, color = Color.DarkGray)
+
+        // Teks
+        Text(
+            text = title,
+            fontSize = 10.sp,
+            fontFamily = Poppins,
+            color = if (isSelected) Pink else Color.DarkGray, // Teks jadi Pink jika dipilih
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
 
@@ -284,7 +362,10 @@ fun DonationListItem(donation: Donation, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp)
-            .clickable { onClick() },
+            .clickable (
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ){ onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

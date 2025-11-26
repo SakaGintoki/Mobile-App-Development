@@ -96,6 +96,10 @@ val PinkSoft = Color(0xFFFFF0F5)     // Pink Background Lembut
 val PinkSurface = Color(0xFFFFFBFC)  // Background Halaman
 val TextPrimary = Color(0xFF1A1A1A)  // Hitam tidak pekat (lebih enak di mata)
 val TextSecondary = Color(0xFF757575)
+val LightPinkBg = Color(0xFFFFF0F5)
+val SoftGray = Color(0xFFF8F9FA)
+private val PageBg = Color(0xFFFFF1F6)
+private val InputBg = Color(0xFFFFFFFF)
 
 val primaryGradient= listOf(
     Color(0xFFa75fbf),

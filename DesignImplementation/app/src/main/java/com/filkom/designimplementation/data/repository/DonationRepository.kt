@@ -22,7 +22,6 @@ class DonationRepository {
         }
     }
 
-    // TAMBAHKAN FUNGSI INI
     suspend fun updateCurrentAmount(donationId: String, amount: Double) {
         try {
             firestore.collection("donations")

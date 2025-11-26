@@ -15,4 +15,5 @@ data class Doctor(
     val patientCount: Int = 0,
 
     @get:PropertyName("isProfessional")
-    val isProfessional: Boolean = true)
+    val isProfessional: Boolean = true
+)

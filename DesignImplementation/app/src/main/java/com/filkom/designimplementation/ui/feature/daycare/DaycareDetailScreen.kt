@@ -76,7 +76,7 @@ fun DaycareDetailScreen(
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
 
         if (isGranted) {
-            viewModel.getUserLocation(context)
+            viewModel.startLocationUpdates(context)
         }
     }
     LaunchedEffect(Unit) {
@@ -88,7 +88,7 @@ fun DaycareDetailScreen(
         ) == PackageManager.PERMISSION_GRANTED
 
         if (hasFineLocation) {
-            viewModel.getUserLocation(context)
+            viewModel.startLocationUpdates(context)
         } else {
             locationPermissionLauncher.launch(
                 arrayOf(

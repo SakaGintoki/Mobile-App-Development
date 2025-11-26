@@ -72,7 +72,7 @@ fun DaycareListScreen(
         ) == PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            viewModel.getUserLocation(context)
+            viewModel.startLocationUpdates(context)
         }
     }
 
@@ -104,8 +104,6 @@ fun DaycareListScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-
-            // 2. SEARCH BAR (Diupdate agar bisa diketik)
             Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -113,7 +111,6 @@ fun DaycareListScreen(
                     color = Color.White,
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    // Gunakan TextField dengan warna transparan agar menyatu dengan Surface
                     TextField(
                         value = searchQuery,
                         onValueChange = { newValue ->

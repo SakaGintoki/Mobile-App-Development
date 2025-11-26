@@ -80,31 +80,6 @@ class ConsultationViewModel : ViewModel() {
         }
     }
 
-//    fun checkActiveSession(doctorId: String, userId: String, onResult: (Boolean) -> Unit) {
-//        viewModelScope.launch {
-//            val calendar = Calendar.getInstance()
-//            val locale = Locale("id", "ID")
-//
-//            val dateFormat = SimpleDateFormat("EEEE, d MMMM yyyy", locale)
-//            val currentDate = dateFormat.format(calendar.time)
-//
-//            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-//            val bookedTimesToday = repository.getBookedTimes(doctorId, currentDate)
-//
-//            var isActive = false
-//
-//            for (time in bookedTimesToday) {
-//                val bookedHour = time.split(".").firstOrNull()?.toIntOrNull() ?: -1
-//
-//                if (currentHour == bookedHour) {
-//                    isActive = true
-//                    break
-//                }
-//            }
-//            onResult(isActive)
-//        }
-//    }
-
     fun checkActiveSession(doctorId: String, userId: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val calendar = Calendar.getInstance()
@@ -113,13 +88,38 @@ class ConsultationViewModel : ViewModel() {
             val dateFormat = SimpleDateFormat("EEEE, d MMMM yyyy", locale)
             val currentDate = dateFormat.format(calendar.time)
 
+            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
             val bookedTimesToday = repository.getBookedTimes(doctorId, currentDate)
 
-            val isActive = bookedTimesToday.isNotEmpty()
+            var isActive = false
 
+            for (time in bookedTimesToday) {
+                val bookedHour = time.split(".").firstOrNull()?.toIntOrNull() ?: -1
+
+                if (currentHour == bookedHour) {
+                    isActive = true
+                    break
+                }
+            }
             onResult(isActive)
         }
     }
+
+//    fun checkActiveSession(doctorId: String, userId: String, onResult: (Boolean) -> Unit) {
+//        viewModelScope.launch {
+//            val calendar = Calendar.getInstance()
+//            val locale = Locale("id", "ID")
+//
+//            val dateFormat = SimpleDateFormat("EEEE, d MMMM yyyy", locale)
+//            val currentDate = dateFormat.format(calendar.time)
+//
+//            val bookedTimesToday = repository.getBookedTimes(doctorId, currentDate)
+//
+//            val isActive = bookedTimesToday.isNotEmpty()
+//
+//            onResult(isActive)
+//        }
+//    }
 
     fun loadChatSession(doctorId: String, userId: String) {
         viewModelScope.launch {

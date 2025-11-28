@@ -84,7 +84,7 @@ fun ConsultationDetailScreen(
         }
     }
 
-    val adminFee = 5000.0
+    val adminFee = 7000.0
     val totalPrice = doctor.price + adminFee
 
     Scaffold(

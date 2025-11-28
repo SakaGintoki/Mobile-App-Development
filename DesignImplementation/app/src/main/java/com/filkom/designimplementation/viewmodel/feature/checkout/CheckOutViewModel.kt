@@ -67,9 +67,18 @@ class CheckoutViewModel : ViewModel() {
     private var bookingDateString = ""
     private var bookingTimeString = ""
 
-    // ... (Fungsi prepareCartCheckout, prepareDirectCheckout, prepareSitterCheckout SAMA) ...
+    // --- FUNGSI RESET STATE (PENTING) ---
+    fun resetState() {
+        transactionState = null
+        errorMessage = ""
+        selectedPaymentMethod = null
+        bookingDateString = ""
+        bookingTimeString = ""
+        // checkoutItems dibiarkan, karena mungkin mau dilihat sebelum bayar
+    }
 
     fun prepareCartCheckout() {
+        resetState() // Reset sebelum mulai
         checkoutType = CheckoutType.CART
         viewModelScope.launch {
             cartRepository.getCartItemsFlow().collect { items ->
@@ -81,6 +90,7 @@ class CheckoutViewModel : ViewModel() {
     }
 
     fun prepareDirectCheckout(product: Product) {
+        resetState() // Reset sebelum mulai
         checkoutType = CheckoutType.DIRECT_BUY
         val tempItem = CartItem(
             id = "temp_direct",
@@ -95,6 +105,7 @@ class CheckoutViewModel : ViewModel() {
     }
 
     fun prepareSitterCheckout(sitter: Sitter, date: String, time: String) {
+        resetState() // Reset sebelum mulai
         checkoutType = CheckoutType.ESITTER
         bookingDateString = date
         bookingTimeString = time
@@ -112,14 +123,15 @@ class CheckoutViewModel : ViewModel() {
     }
 
     fun prepareDonationCheckout(donation: Donation, nominal: Double) {
+        resetState() // Reset sebelum mulai
         checkoutType = CheckoutType.DONATION
 
         val tempItem = CartItem(
             id = "temp_donation_${System.currentTimeMillis()}",
-            productId = donation.id, // Ini ID Donasinya
+            productId = donation.id,
             name = donation.title,
             imageUrl = donation.imageUrl,
-            price = nominal, // Nominal yang diinput user
+            price = nominal,
             quantity = 1,
             isSelected = true
         )
@@ -127,15 +139,15 @@ class CheckoutViewModel : ViewModel() {
     }
 
     fun prepareConsultationCheckout(doctor: Doctor, date: String, time: String) {
+        resetState() // Reset sebelum mulai
         checkoutType = CheckoutType.CONSULTATION
-        bookingDateString = date // Simpan
-        bookingTimeString = time // Simpan
+        bookingDateString = date
+        bookingTimeString = time
 
-        // Buat item sementara untuk checkout
         val tempItem = CartItem(
             id = "temp_consult_${System.currentTimeMillis()}",
             productId = doctor.id,
-            name = "Konsultasi: ${doctor.name} ($date - $time)", // Judul transaksi
+            name = "Konsultasi: ${doctor.name} ($date - $time)",
             imageUrl = doctor.imageUrl,
             price = doctor.price,
             quantity = 1,
@@ -145,6 +157,7 @@ class CheckoutViewModel : ViewModel() {
     }
 
     fun prepareDaycareCheckout(daycare: Daycare, startDate: String) {
+        resetState() // Reset sebelum mulai
         checkoutType = CheckoutType.DAYCARE
 
         val tempItem = CartItem(
@@ -153,11 +166,12 @@ class CheckoutViewModel : ViewModel() {
             name = "${daycare.name} (Mulai: $startDate)",
             imageUrl = daycare.imageUrl,
             price = daycare.price,
-            quantity = 1, // Default 1 (misal 1 hari/1 bulan)
+            quantity = 1,
             isSelected = true
         )
         _checkoutItems.value = listOf(tempItem)
     }
+
     fun getSubtotal(): Double = _checkoutItems.value.sumOf { it.price * it.quantity }
     fun getTotalPayment(): Double = getSubtotal() + adminFee
 
@@ -169,7 +183,6 @@ class CheckoutViewModel : ViewModel() {
         viewModelScope.launch {
             transactionState = "loading"
 
-            // 1. PROSES POTONG SALDO / POINT
             val success = if (paymentType == "internal") {
                 val points = (total * 0.02).toInt()
                 userRepository.processTransaction(userId, total, points)
@@ -206,10 +219,7 @@ class CheckoutViewModel : ViewModel() {
 
                     when (checkoutType) {
                         CheckoutType.ESITTER -> {
-                            // A. Tambah jumlah job selesai
                             sitterRepository.incrementCompletedJobs(item.productId)
-
-                            // B. KUNCI SLOT (Simpan ke database appointments)
                             if (bookingDateString.isNotEmpty() && bookingTimeString.isNotEmpty()) {
                                 sitterRepository.saveBookingSlot(
                                     item.productId,
@@ -221,8 +231,6 @@ class CheckoutViewModel : ViewModel() {
 
                         CheckoutType.CONSULTATION -> {
                             consultationRepository.incrementPatientCount(item.productId)
-
-                            // Logic yang sama untuk Dokter
                             if (bookingDateString.isNotEmpty() && bookingTimeString.isNotEmpty()) {
                                 consultationRepository.saveBookingSlot(
                                     item.productId,
@@ -246,7 +254,6 @@ class CheckoutViewModel : ViewModel() {
                     }
                 }
 
-                // 5. HAPUS DARI KERANJANG (HANYA JIKA TIPE = CART)
                 if (checkoutType == CheckoutType.CART) {
                     val cartIds = _checkoutItems.value.map { it.id }
                     cartRepository.deleteItems(cartIds)
